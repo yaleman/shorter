@@ -1,0 +1,49 @@
+[package]
+name = "shorter"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+anyhow = "1.0.82"
+axum = { version = "0.7.5", features = ["macros", "http2"] }
+clap = { version = "4.5.4", features = ["derive", "env"] }
+serde = { version = "1.0.200", features = ["derive"] }
+sqlx = { version = "0.7", features = ["runtime-tokio", "sqlite", "uuid"] }
+
+tokio = { version = "1.37.0", features = ["full", "tracing"] }
+tracing-subscriber = "0.3.18"
+url = { version = "2.5.0", features = ["serde"] }
+uuid = { version = "1.8.0", features = ["serde", "v4"] }
+
+
+# oauth2 = "4.4.2"
+# openidconnect = "3.4.0"
+# opentelemetry-otlp = { version = "0.15.0", features = ["http-proto"] }
+axum-tracing-opentelemetry = { version = "0.11.0", features = [
+    "tracing_subscriber_ext",
+] }
+axum-csp = { git = "https://github.com/yaleman/axum-csp/", rev = "cb55f3d" }
+
+askama = { version = "0.12.1" }
+
+tower-http = { version = "^0.5.2", features = [
+    "fs",
+    "trace",
+    "add-extension",
+    "compression-gzip",
+] }
+tower-sessions = { version = "^0.9.1", features = [
+    "sqlite-store",
+    "deletion-task",
+    "axum-core",
+] }
+tracing = "^0.1.40"
+
+
+[dev-dependencies]
+hyper = "1.3.1"
+reqwest = { version = "0.12.4", features = ["json"] }
+serde_json = "1.0.116"
+tower = "0.4.13"
