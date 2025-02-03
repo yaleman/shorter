@@ -39,7 +39,7 @@ tower-sessions = { version = "^0.9.1", features = [
     "deletion-task",
     "axum-core",
 ] }
-tracing = "^0.1.40"
+tracing = "^0.1.41"
 
 
 [dev-dependencies]
