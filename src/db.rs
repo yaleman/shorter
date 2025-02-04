@@ -115,7 +115,7 @@ impl DB {
     }
 }
 
-async fn create_tables(conn: Pool<Sqlite>) -> Result<(), sqlx::Error> {
+pub(crate) async fn create_tables(conn: Pool<Sqlite>) -> Result<(), sqlx::Error> {
     sqlx::query(&format!(
         "CREATE TABLE IF NOT EXISTS {} (
             id    TEXT NOT NULL UNIQUE,
@@ -143,6 +143,8 @@ async fn create_tables(conn: Pool<Sqlite>) -> Result<(), sqlx::Error> {
     ))
     .execute(&conn)
     .await?;
+
+    User::create_table(&conn).await?;
     Ok(())
 }
 
@@ -153,8 +155,8 @@ where
 {
     const TABLE: &'static str;
 
-    async fn create_table(pool: &sqlx::AnyPool) -> Result<(), sqlx::Error>;
-    async fn new(&self) -> Result<Self, MyError>;
+    async fn create_table(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error>;
+    async fn new() -> Result<Self, MyError>;
 
     /// save the entity to the database
     async fn save(&self, pool: &Pool<Sqlite>) -> Result<Box<Self>, MyError> {

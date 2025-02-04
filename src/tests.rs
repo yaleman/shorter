@@ -22,7 +22,7 @@ async fn test_post_link() {
     let newlink = LinkForm {
         owner: Uuid::new_v4(),
         name: "test".to_string(),
-        target: Url::parse(&link_target).unwrap(),
+        target: Url::parse(link_target).unwrap(),
         tag: Some("cheese".to_string()),
     };
 
@@ -71,7 +71,7 @@ async fn test_banned_tag() {
     let newlink = LinkForm {
         owner: Uuid::new_v4(),
         name: "test".to_string(),
-        target: Url::parse(&link_target).unwrap(),
+        target: Url::parse(link_target).unwrap(),
         tag: Some("admin".to_string()),
     };
 

@@ -121,12 +121,8 @@ async fn link(
         }
     };
     match link {
-        None => {
-            return Err((StatusCode::NOT_FOUND, "404 Link Not Found".to_string()));
-        }
-        Some(link) => {
-            return Ok(Redirect::to(link.target.to_string().as_str()));
-        }
+        None => Err((StatusCode::NOT_FOUND, "404 Link Not Found".to_string())),
+        Some(link) => Ok(Redirect::to(link.target.to_string().as_str())),
     }
 }
 

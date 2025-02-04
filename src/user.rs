@@ -1,10 +1,12 @@
 use axum::async_trait;
 use serde::{Deserialize, Serialize};
 use sqlx::sqlite::SqliteRow;
-use sqlx::{Pool, Sqlite, SqliteConnection, Transaction};
+use sqlx::{Pool, Sqlite, SqliteConnection};
 use tracing::error;
 use uuid::Uuid;
 
+#[cfg(test)]
+use crate::db::create_tables;
 use crate::prelude::*;
 
 #[derive(Clone, Deserialize, Serialize, Debug, sqlx::FromRow)]
@@ -19,8 +21,17 @@ pub struct User {
 }
 
 impl From<SqliteRow> for User {
-    fn from(_value: SqliteRow) -> Self {
-        todo!()
+    fn from(value: SqliteRow) -> Self {
+        use sqlx::Row;
+        User {
+            id: value.try_get("id").ok(),
+            displayname: value.try_get("displayname").unwrap_or_default(),
+            username: value.try_get("username").unwrap_or_default(),
+            email: value.try_get("email").unwrap_or_default(),
+            disabled: value.try_get("disabled").unwrap_or_default(),
+            authref: value.try_get("authref").ok(),
+            admin: value.try_get("admin").unwrap_or_default(),
+        }
     }
 }
 
@@ -28,16 +39,17 @@ impl From<SqliteRow> for User {
 impl DBEntity<Uuid> for User {
     const TABLE: &'static str = "users";
 
-    async fn create_table(pool: &sqlx::AnyPool) -> Result<(), sqlx::Error> {
+    async fn create_table(pool: &Pool<Sqlite>) -> Result<(), sqlx::Error> {
         sqlx::query(&format!(
             "CREATE TABLE IF NOT EXISTS {} (
-                id INTEGER NOT NULL UNIQUE,
-                displayname TEXT NOT NULL,
-                username TEXT NOT NULL UNIQUE,
+                id INTEGER  PRIMARY KEY AUTOINCREMENT,
+                username TEXT NOT NULL,
+                displayname TEXT,
                 email TEXT NOT NULL UNIQUE,
                 disabled BOOLEAN,
                 authref TEXT,
-                admin BOOLEAN
+                admin BOOLEAN,
+                UNIQUE(username)
             )",
             Self::TABLE
         ))
@@ -47,7 +59,7 @@ impl DBEntity<Uuid> for User {
         Ok(())
     }
 
-    async fn new(&self) -> Result<Self, crate::prelude::MyError> {
+    async fn new() -> Result<Self, crate::prelude::MyError> {
         todo!()
     }
 
@@ -56,7 +68,7 @@ impl DBEntity<Uuid> for User {
             "SELECT id, displayname, username, email, disabled, authref, admin from {} where id=?",
             Self::TABLE
         ))
-        .bind(&id)
+        .bind(id)
         .fetch_one(&mut *pool.acquire().await?)
         .await
         {
@@ -73,21 +85,27 @@ impl DBEntity<Uuid> for User {
         &self,
         txn: &mut sqlx::SqliteConnection,
     ) -> Result<Box<Self>, MyError> {
-        sqlx::query(&format!(
+        let query = format!(
             "INSERT INTO {}
             (displayname, username, email, disabled, authref, admin) VALUES (?, ?, ?, ?, ?, ?)
-            ON CONFLICT (id, username) DO UPDATE SET
+            ON CONFLICT (username) DO UPDATE SET
+            displayname = excluded.displayname,
+            email = excluded.email,
+            disabled = excluded.disabled,
+            authref = excluded.authref,
+            admin = excluded.admin
             ",
             Self::TABLE
-        ))
-        .bind(&self.displayname)
-        .bind(&self.username)
-        .bind(&self.email)
-        .bind(&self.disabled)
-        .bind(&self.authref)
-        .bind(&self.admin)
-        .execute(txn)
-        .await?;
+        );
+        sqlx::query(&query)
+            .bind(&self.displayname)
+            .bind(&self.username)
+            .bind(&self.email)
+            .bind(self.disabled)
+            .bind(&self.authref)
+            .bind(self.admin)
+            .execute(&mut *txn)
+            .await?;
 
         // now get the user we just saved
         match self.get_by_username(txn, &self.username).await {
@@ -120,8 +138,8 @@ impl User {
         txn: &mut SqliteConnection,
         username: &str,
     ) -> Result<Option<Self>, MyError> {
-        sqlx::query("SELECT * from {} where username=?")
-            .bind(&username)
+        sqlx::query(&format!("SELECT * from {} where username=?", Self::TABLE))
+            .bind(username)
             .fetch_optional(&mut *txn)
             .await
             .map(|res| res.map(|row| row.into()))
@@ -133,6 +151,8 @@ impl User {
 async fn test_create_user() {
     let db = DB::new_memory().await.unwrap();
 
+    create_tables(db.dbpool.clone()).await.unwrap();
+
     let example_user = User {
         id: None,
         displayname: "Test User".to_string(),
@@ -142,7 +162,7 @@ async fn test_create_user() {
         admin: false,
         authref: None,
     };
-
+    dbg!(&example_user);
     if let Err(err) = example_user.save(&db.dbpool).await {
         panic!("Failed to save user: {:?}", err);
     }
