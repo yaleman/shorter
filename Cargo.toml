@@ -24,7 +24,7 @@ axum-csp = { git = "https://github.com/yaleman/axum-csp/", rev = "cb55f3d" }
 
 askama = { version = "0.12.1" }
 
-tower-http = { version = "^0.5.2", features = [
+tower-http = { version = "^0.6.2", features = [
     "fs",
     "trace",
     "add-extension",
