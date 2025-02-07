@@ -7,7 +7,7 @@ edition = "2021"
 
 [dependencies]
 anyhow = "1.0.82"
-axum = { version = "0.7.5", features = ["macros", "http2"] }
+axum = { version = "0.8.1", features = ["macros", "http2"] }
 clap = { version = "4.5.4", features = ["derive", "env"] }
 serde = { version = "1.0.200", features = ["derive"] }
 sqlx = { version = "0.7", features = ["runtime-tokio", "sqlite", "uuid"] }
