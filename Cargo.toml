@@ -22,7 +22,7 @@ axum-tracing-opentelemetry = { version = "0.11.0", features = [
 ] }
 axum-csp = { git = "https://github.com/yaleman/axum-csp/", rev = "cb55f3d" }
 
-askama = { version = "0.13.1" }
+askama = { version = "0.14.0" }
 
 tower-http = { version = "^0.6.2", features = [
     "fs",
