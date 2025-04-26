@@ -74,8 +74,8 @@ pub(crate) fn build_app(shared_state: AppState) -> Router {
         // `GET /` goes to `root`
         .route("/", get(root))
         .route("/link", post(create_link))
-        .route("/:link/preview", get(link_preview))
-        .route("/:link", get(link))
+        .route("/{link}/preview", get(link_preview))
+        .route("/{link}", get(link))
         .with_state(shared_state)
 }
 
