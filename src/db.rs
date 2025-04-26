@@ -1,4 +1,3 @@
-use axum::async_trait;
 use sqlx::{Acquire, Pool, Sqlite, SqliteConnection};
 use url::Url;
 use uuid::Uuid;
@@ -148,7 +147,7 @@ pub(crate) async fn create_tables(conn: Pool<Sqlite>) -> Result<(), sqlx::Error>
     Ok(())
 }
 
-#[async_trait]
+#[async_trait::async_trait]
 pub trait DBEntity<T>: Send + Sync
 where
     Self: Sized + Send + Sync,
