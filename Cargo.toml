@@ -36,7 +36,7 @@ tower-sessions = { version = "^0.9.1", features = [
     "axum-core",
 ] }
 tracing = "^0.1.41"
-async-trait = "0.1.88"
+async-trait = "0.1.89"
 
 
 [dev-dependencies]
