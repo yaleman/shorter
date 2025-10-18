@@ -8,6 +8,7 @@ pub mod prelude;
 #[cfg(test)]
 mod tests;
 
+use std::path::PathBuf;
 use std::sync::Arc;
 
 use crate::auth::{middleware::require_auth, AuthUser, OAuthClient};
@@ -23,6 +24,7 @@ use axum::{
     routing::{get, post},
     Form, Json, Router,
 };
+use clap::Parser;
 use serde::{Deserialize, Serialize};
 use tower_http::trace::TraceLayer;
 // use tower_http::trace::TraceLayer;
@@ -126,6 +128,7 @@ pub(crate) fn build_app(shared_state: AppState) -> Router {
     Router::new()
         // Public routes
         .route("/", get(root))
+        .route("/healthcheck", get(|| async { StatusCode::OK }))
         .route("/favicon.ico", get(favicon))
         .route("/link", post(create_link_api))
         .route("/{link}/preview", get(link_preview))
@@ -141,12 +144,7 @@ pub(crate) fn build_app(shared_state: AppState) -> Router {
         .with_state(shared_state)
 }
 
-pub async fn start_server(
-    listener_addr: &str,
-    oidc_config: Option<OidcConfig>,
-    tls_cert_path: &str,
-    tls_key_path: &str,
-) {
+pub async fn start_server(cli: CliOpts, oidc_config: Option<OidcConfig>) {
     use axum_server::tls_rustls::RustlsConfig;
 
     let shared_state = match AppState::new("sqlite://shorter.sqlite3?mode=rwc", oidc_config).await {
@@ -160,18 +158,18 @@ pub async fn start_server(
     let app = build_app(shared_state);
 
     // Load TLS configuration
-    let tls_config = match RustlsConfig::from_pem_file(tls_cert_path, tls_key_path).await {
+    let tls_config = match RustlsConfig::from_pem_file(&cli.tls_cert, &cli.tls_key).await {
         Ok(config) => config,
         Err(e) => {
             error!("Failed to load TLS certificates: {:?}", e);
-            error!("  Certificate: {}", tls_cert_path);
-            error!("  Key: {}", tls_key_path);
+            error!("  Certificate: {}", cli.tls_cert);
+            error!("  Key: {}", cli.tls_key);
             return;
         }
     };
 
     // Use axum-server with TLS
-    if let Err(e) = axum_server::bind_rustls(listener_addr.parse().unwrap(), tls_config)
+    if let Err(e) = axum_server::bind_rustls(cli.listener_addr.parse().unwrap(), tls_config)
         .serve(app.into_make_service())
         .await
     {
@@ -614,4 +612,37 @@ async fn create_link_api(
         })?;
 
     Ok(link.into())
+}
+
+#[allow(dead_code)]
+fn default_listener() -> &'static str {
+    "127.0.0.1:9000"
+}
+
+#[derive(Parser)]
+pub struct CliOpts {
+    /// Frontend URL (e.g., https://short.example.com) - used for OIDC redirect URI
+    #[clap(env = "SHORTER_FRONTEND_URL")]
+    pub frontend_url: String,
+
+    /// OIDC discovery URL (e.g., https://accounts.google.com/.well-known/openid-configuration)
+    #[clap(env = "SHORTER_OIDC_DISCOVERY_URL")]
+    pub oidc_discovery_url: String,
+
+    /// OIDC client ID
+    #[clap(env = "SHORTER_OIDC_CLIENT_ID")]
+    pub oidc_client_id: String,
+
+    /// Path to TLS certificate file (required)
+    #[clap(env = "SHORTER_TLS_CERT")]
+    pub tls_cert: String,
+
+    /// Path to TLS private key file (required)
+    #[clap(env = "SHORTER_TLS_KEY")]
+    pub tls_key: String,
+    #[clap(env = "SHORTER_LISTENER_ADDR", default_value = "127.0.0.1:9000")]
+    pub listener_addr: String,
+
+    #[clap(env = "SHORTER_DB_PATH", default_value = "shorter.sqlite3")]
+    pub db_path: PathBuf,
 }

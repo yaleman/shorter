@@ -59,7 +59,7 @@ docker_build:
 docker_run: docker_build
     docker run --rm -it \
         -p 9000:9000 \
-        --mount type=bind,src=$(pwd)/config,target=/config \
+        --mount type=bind,src=$(pwd),target=/data \
         ghcr.io/yaleman/shorter:latest
 
 run:
