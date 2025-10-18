@@ -7,10 +7,12 @@ use tower::util::ServiceExt;
 use url::Url;
 
 use crate::db::{LinkWithOwner, DB};
+use crate::logging::setup_test_logging;
 use crate::{build_app, AppState, CreateLinkApiRequest};
 
 /// Build a test Axum router instance
 async fn get_test_instance() -> (Router, Arc<DB>) {
+    setup_test_logging();
     let shared_state = AppState::new_test().await;
     let db = shared_state.db.clone();
     (build_app(shared_state), db)

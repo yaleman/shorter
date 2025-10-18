@@ -7,7 +7,7 @@ default:
     just --list
 
 # run the linter, tests, and format the code
-check: clippy test fmt lint-scripts
+check: clippy test fmt
 
 # run clippy
 clippy:

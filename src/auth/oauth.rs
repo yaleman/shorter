@@ -88,6 +88,12 @@ impl OAuthClient {
                 MyError::Other("Failed to create PKCE session duration".to_string())
             })?;
 
+        debug!(
+            "Storing PKCE state: {}, expires at: {:?}",
+            csrf_token.secret(),
+            expires_at
+        );
+
         self.db
             .store_pkce_state(
                 csrf_token.secret(),
@@ -97,7 +103,12 @@ impl OAuthClient {
                 self.redirect_uri.as_str(),
                 expires_at,
             )
-            .await?;
+            .await
+            .inspect_err(|err| {
+                error!("Failed to store PKCE state in database: {:?}", err);
+            })?;
+
+        debug!("Successfully stored PKCE state: {}", csrf_token.secret());
 
         Ok((auth_url.to_string(), csrf_token.secret().to_string()))
     }
@@ -109,15 +120,27 @@ impl OAuthClient {
         code: &str,
         state: &str,
     ) -> Result<(String, String), MyError> {
+        debug!("Looking up PKCE state for: {}", state);
+
         // Retrieve PKCE state from database
-        let pkce_state = self
-            .db
-            .get_pkce_state(state)
-            .await?
-            .ok_or(MyError::OidcStateParameterExpired)?;
+        let pkce_state = self.db.get_pkce_state(state).await?.ok_or_else(|| {
+            error!("PKCE state not found in database for state: {}", state);
+            MyError::OidcStateParameterExpired
+        })?;
+
+        debug!(
+            "Found PKCE state, checking expiration. Expires at: {:?}, Now: {:?}",
+            pkce_state.expires_at,
+            chrono::Utc::now().naive_utc()
+        );
 
         // Check if expired
         if pkce_state.expires_at < chrono::Utc::now().naive_utc() {
+            error!(
+                "PKCE state expired. Expires at: {:?}, Now: {:?}",
+                pkce_state.expires_at,
+                chrono::Utc::now().naive_utc()
+            );
             self.db.delete_pkce_state(state).await?;
             return Err(MyError::OidcStateParameterExpired);
         }

@@ -1,7 +1,9 @@
 pub mod auth;
+pub mod constants;
 pub mod db;
 pub mod entities;
 pub mod error;
+pub mod logging;
 pub mod prelude;
 #[cfg(test)]
 mod tests;
@@ -9,6 +11,7 @@ mod tests;
 use std::sync::Arc;
 
 use crate::auth::{middleware::require_auth, AuthUser, OAuthClient};
+use crate::constants::Urls;
 use crate::db::{LinkWithOwner, DB};
 use askama::Template;
 use axum::{
@@ -21,15 +24,19 @@ use axum::{
     Form, Json, Router,
 };
 use serde::{Deserialize, Serialize};
+use tower_http::trace::TraceLayer;
+// use tower_http::trace::TraceLayer;
 use tower_sessions::{Expiry, Session, SessionManagerLayer};
+use tracing::{debug, error, instrument};
 use url::Url;
 
-const BANNED_TAGS: [&str; 3] = ["link", "admin", "preview"];
+const BANNED_TAGS: &[&str] = &["link", "admin", "preview", "login", "logout", "auth"];
 
 #[derive(Clone)]
 pub struct AppState {
     pub db: Arc<DB>,
     pub oauth_client: Option<Arc<OAuthClient>>,
+    pub session_pool: sqlx::SqlitePool,
 }
 
 impl AppState {
@@ -39,6 +46,17 @@ impl AppState {
         oidc_config: Option<OidcConfig>,
     ) -> Result<Self, crate::error::MyError> {
         let db = DB::new(database_url).await?;
+
+        // Create separate sqlx pool for session store
+        let session_pool = sqlx::SqlitePool::connect(database_url)
+            .await
+            .map_err(|e| crate::error::MyError::DatabaseError(e.to_string()))?;
+
+        // Migrate session store tables
+        let session_store = tower_sessions_sqlx_store::SqliteStore::new(session_pool.clone());
+        session_store.migrate().await.map_err(|e| {
+            crate::error::MyError::DatabaseError(format!("Failed to migrate session store: {}", e))
+        })?;
 
         let oauth_client = if let Some(config) = oidc_config {
             Some(Arc::new(
@@ -57,16 +75,21 @@ impl AppState {
         Ok(Self {
             db: Arc::new(db),
             oauth_client,
+            session_pool,
         })
     }
 
     #[cfg(test)]
     pub async fn new_test() -> Self {
         let db = DB::new_test().await;
+        let session_pool = sqlx::SqlitePool::connect("sqlite::memory:")
+            .await
+            .expect("Failed to create session pool");
 
         Self {
             db: Arc::new(db),
             oauth_client: None,
+            session_pool,
         }
     }
 }
@@ -81,12 +104,11 @@ pub struct OidcConfig {
 
 pub(crate) fn build_app(shared_state: AppState) -> Router {
     // Create session layer (secure cookies for HTTPS)
-    let session_store = tower_sessions_sqlx_store::SqliteStore::new(
-        shared_state.db.conn.get_sqlite_connection_pool().clone(),
-    );
+    let session_store =
+        tower_sessions_sqlx_store::SqliteStore::new(shared_state.session_pool.clone());
     let session_layer = SessionManagerLayer::new(session_store)
         .with_secure(true) // HTTPS only - secure cookies
-        .with_expiry(Expiry::OnInactivity(time::Duration::hours(24)));
+        .with_expiry(Expiry::OnInactivity(time::Duration::hours(1)));
 
     // Admin routes with authentication middleware
     let admin_routes = Router::new()
@@ -109,12 +131,13 @@ pub(crate) fn build_app(shared_state: AppState) -> Router {
         .route("/{link}/preview", get(link_preview))
         .route("/{link}", get(link))
         // Auth routes
-        .route("/auth/login", get(auth_login))
-        .route("/auth/callback", get(auth_callback))
-        .route("/auth/logout", get(auth_logout))
+        .route(Urls::Login.as_ref(), get(auth_login))
+        .route(Urls::AuthCallback.as_ref(), get(auth_callback))
+        .route(Urls::AuthLogout.as_ref(), get(auth_logout))
         // Admin routes (protected)
-        .nest("/admin", admin_routes)
+        .nest("/admin/", admin_routes)
         .layer(session_layer)
+        .layer(TraceLayer::new_for_http())
         .with_state(shared_state)
 }
 
@@ -126,10 +149,10 @@ pub async fn start_server(
 ) {
     use axum_server::tls_rustls::RustlsConfig;
 
-    let shared_state = match AppState::new("sqlite://shorter.sqlite3", oidc_config).await {
+    let shared_state = match AppState::new("sqlite://shorter.sqlite3?mode=rwc", oidc_config).await {
         Ok(state) => state,
         Err(e) => {
-            eprintln!("Failed to initialize application: {:?}", e);
+            error!("Failed to initialize application: {:?}", e);
             return;
         }
     };
@@ -140,21 +163,19 @@ pub async fn start_server(
     let tls_config = match RustlsConfig::from_pem_file(tls_cert_path, tls_key_path).await {
         Ok(config) => config,
         Err(e) => {
-            eprintln!("Failed to load TLS certificates: {:?}", e);
-            eprintln!("  Certificate: {}", tls_cert_path);
-            eprintln!("  Key: {}", tls_key_path);
+            error!("Failed to load TLS certificates: {:?}", e);
+            error!("  Certificate: {}", tls_cert_path);
+            error!("  Key: {}", tls_key_path);
             return;
         }
     };
-
-    eprintln!("Starting HTTPS server on https://{}", listener_addr);
 
     // Use axum-server with TLS
     if let Err(e) = axum_server::bind_rustls(listener_addr.parse().unwrap(), tls_config)
         .serve(app.into_make_service())
         .await
     {
-        eprintln!("Server error: {:?}", e);
+        error!("Server error: {:?}", e);
     }
 }
 
@@ -225,7 +246,7 @@ async fn auth_login(State(state): State<AppState>) -> Result<Redirect, (StatusCo
     ))?;
 
     let (auth_url, _state) = oauth_client.generate_auth_url().await.map_err(|e| {
-        eprintln!("Failed to generate auth URL: {:?}", e);
+        error!("Failed to generate auth URL: {:?}", e);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to start login".to_string(),
@@ -235,54 +256,69 @@ async fn auth_login(State(state): State<AppState>) -> Result<Redirect, (StatusCo
     Ok(Redirect::to(&auth_url))
 }
 
-#[debug_handler]
+#[instrument(level = "info", skip_all)]
 async fn auth_callback(
     State(state): State<AppState>,
     Query(query): Query<OAuthCallbackQuery>,
     session: Session,
 ) -> Result<Redirect, (StatusCode, String)> {
+    tracing::debug!(
+        "Auth callback received - code: {}, state: {}",
+        &query.code,
+        &query.state
+    );
+
     let oauth_client = state.oauth_client.as_ref().ok_or((
         StatusCode::SERVICE_UNAVAILABLE,
         "OAuth not configured".to_string(),
     ))?;
 
+    tracing::debug!("Starting code exchange");
     // Exchange code for tokens
     let (email, subject) = oauth_client
         .exchange_code(&query.code, &query.state)
         .await
         .map_err(|e| {
-            eprintln!("Failed to exchange code: {:?}", e);
+            error!("Failed to exchange code: {:?}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Authentication failed".to_string(),
             )
         })?;
 
+    tracing::debug!(
+        "Code exchange successful - email: {}, subject: {}",
+        &email,
+        &subject
+    );
+
+    debug!("trying to create user");
     // Get or create user in database
     let user = state
         .db
         .get_or_create_user(&subject, &email, None)
         .await
         .map_err(|e| {
-            eprintln!("Failed to create user: {:?}", e);
+            error!("Failed to create user: {:?}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create user".to_string(),
             )
         })?;
 
+    debug!("trying to create store user sesssion");
     // Store user subject in session
     session
         .insert("user_subject", user.subject)
         .await
         .map_err(|e| {
-            eprintln!("Failed to store session: {:?}", e);
+            error!("Failed to store session: {:?}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to save session".to_string(),
             )
         })?;
-
+    debug!("successfully stored user session, redirecting");
     Ok(Redirect::to("/admin/"))
 }
 
@@ -292,7 +328,7 @@ async fn auth_logout(session: Session) -> Result<Redirect, (StatusCode, String)>
         .remove::<String>("user_subject")
         .await
         .map_err(|e| {
-            eprintln!("Failed to clear session: {:?}", e);
+            error!("Failed to clear session: {:?}", e);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to logout".to_string(),
@@ -304,13 +340,13 @@ async fn auth_logout(session: Session) -> Result<Redirect, (StatusCode, String)>
 
 // ========== Admin Handlers ==========
 
-#[debug_handler]
+#[instrument(level = "info", skip_all)]
 async fn admin_list(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
 ) -> Result<HtmlTemplate<AdminListTemplate>, (StatusCode, String)> {
     let links = state.db.list_links().await.map_err(|err| {
-        eprintln!("Error listing links: {:?}", err);
+        error!("Error listing links: {:?}", err);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to list links".to_string(),
@@ -320,14 +356,14 @@ async fn admin_list(
     Ok(HtmlTemplate(AdminListTemplate { links, user }))
 }
 
-#[debug_handler]
+#[instrument(level = "info")]
 async fn admin_create_form(
     Extension(user): Extension<AuthUser>,
 ) -> HtmlTemplate<AdminCreateTemplate> {
     HtmlTemplate(AdminCreateTemplate { error: None, user })
 }
 
-#[debug_handler]
+#[instrument(level = "info", skip(state))]
 async fn admin_create(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -361,7 +397,7 @@ async fn admin_create(
         .create_link(&user.subject, &form_data.name, &target, tag)
         .await
         .map_err(|err| {
-            eprintln!("Failed to create link: {:?}", err);
+            error!("Failed to create link: {:?}", err);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to create link".to_string(),
@@ -372,14 +408,14 @@ async fn admin_create(
     Ok(Redirect::to("/admin/").into_response())
 }
 
-#[debug_handler]
+#[instrument(level = "debug", skip(state))]
 async fn admin_edit_form(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
     Path(id): Path<String>,
 ) -> Result<HtmlTemplate<AdminEditTemplate>, (StatusCode, String)> {
     let link = state.db.get_link_by_id(&id).await.map_err(|err| {
-        eprintln!("Error getting link: {:?}", err);
+        error!("Error getting link: {:?}", err);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to get link".to_string(),
@@ -396,7 +432,7 @@ async fn admin_edit_form(
     }
 }
 
-#[debug_handler]
+#[instrument(level = "debug", skip(state))]
 async fn admin_edit(
     State(state): State<AppState>,
     Extension(user): Extension<AuthUser>,
@@ -415,7 +451,7 @@ async fn admin_edit(
             .get_link_by_id(&id)
             .await
             .map_err(|err| {
-                eprintln!("Error getting link: {:?}", err);
+                error!("Error getting link: {:?}", err);
                 (
                     StatusCode::INTERNAL_SERVER_ERROR,
                     "Failed to get link".to_string(),
@@ -440,7 +476,7 @@ async fn admin_edit(
         .update_link(&id, &form_data.name, &target, &form_data.tag)
         .await
         .map_err(|err| {
-            eprintln!("Failed to update link: {:?}", err);
+            error!("Failed to update link: {:?}", err);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to update link".to_string(),
@@ -451,13 +487,13 @@ async fn admin_edit(
     Ok(Redirect::to("/admin/").into_response())
 }
 
-#[debug_handler]
+#[instrument(level = "debug", skip(state))]
 async fn admin_delete(
     State(state): State<AppState>,
     Path(id): Path<String>,
 ) -> Result<Redirect, (StatusCode, String)> {
     state.db.delete_link(&id).await.map_err(|err| {
-        eprintln!("Failed to delete link: {:?}", err);
+        error!("Failed to delete link: {:?}", err);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Failed to delete link".to_string(),
@@ -468,16 +504,18 @@ async fn admin_delete(
 }
 
 // basic handler that redirects to admin
+#[instrument(level = "info")]
 async fn root() -> Redirect {
     Redirect::to("/admin/")
 }
 
+#[instrument(level = "info")]
 // favicon handler - returns 204 No Content
 async fn favicon() -> StatusCode {
     StatusCode::NO_CONTENT
 }
 
-#[debug_handler]
+#[instrument(level = "info", skip(state))]
 async fn link(
     State(state): State<AppState>,
     Path(tag): Path<String>,
@@ -487,7 +525,7 @@ async fn link(
     }
 
     let link = state.db.get_link(&tag).await.map_err(|err| {
-        eprintln!("Error getting link '{}'  {:?}", &tag, err);
+        error!("Error getting link '{}'  {:?}", &tag, err);
         (
             StatusCode::INTERNAL_SERVER_ERROR,
             "Error getting link".to_string(),
@@ -500,7 +538,7 @@ async fn link(
     }
 }
 
-#[debug_handler]
+#[instrument(level = "info")]
 async fn link_preview(Path(link): Path<String>) -> String {
     format!("link_preview: '{}'", &link)
 }
@@ -514,7 +552,7 @@ pub struct CreateLinkApiRequest {
     pub tag: Option<String>,
 }
 
-#[debug_handler]
+#[instrument(level = "info", skip(state))]
 async fn create_link_api(
     State(state): State<AppState>,
     Json(request): Json<CreateLinkApiRequest>,
@@ -537,7 +575,7 @@ async fn create_link_api(
         )
         .await
         .map_err(|err| {
-            eprintln!("Failed to save link: {:?}", err);
+            error!("Failed to save link: {:?}", err);
             (
                 StatusCode::INTERNAL_SERVER_ERROR,
                 "Failed to save link".to_string(),

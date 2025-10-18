@@ -5,8 +5,8 @@ use axum::{
 };
 use tower_sessions::Session;
 
-use crate::entities::user;
 use crate::AppState;
+use crate::{constants::Urls, entities::user};
 
 /// Authenticated user information extracted from session
 #[derive(Clone, Debug)]
@@ -28,7 +28,7 @@ impl From<user::Model> for AuthUser {
 
 /// Middleware that requires authentication
 /// Checks session for user_subject, loads user from DB, and adds to request extensions
-/// Redirects to /auth/login if not authenticated
+/// Redirects to /admin/login if not authenticated
 pub async fn require_auth(
     State(state): State<AppState>,
     session: Session,
@@ -40,7 +40,7 @@ pub async fn require_auth(
         Ok(subject) => subject,
         Err(e) => {
             tracing::error!("Failed to get user_subject from session: {:?}", e);
-            return Redirect::to("/auth/login").into_response();
+            return Redirect::to(Urls::Login.as_ref()).into_response();
         }
     };
 
@@ -48,7 +48,7 @@ pub async fn require_auth(
         Some(subject) => subject,
         None => {
             // Not authenticated, redirect to login
-            return Redirect::to("/auth/login").into_response();
+            return Redirect::to(Urls::Login.as_ref()).into_response();
         }
     };
 
@@ -57,13 +57,16 @@ pub async fn require_auth(
         Ok(Some(user)) => user,
         Ok(None) => {
             // User not found in DB, clear session and redirect to login
-            tracing::warn!("User {} not found in database, clearing session", user_subject);
+            tracing::warn!(
+                "User {} not found in database, clearing session",
+                user_subject
+            );
             let _ = session.remove::<String>("user_subject").await;
-            return Redirect::to("/auth/login").into_response();
+            return Redirect::to(Urls::Login.as_ref()).into_response();
         }
         Err(e) => {
             tracing::error!("Failed to load user from database: {:?}", e);
-            return Redirect::to("/auth/login").into_response();
+            return Redirect::to(Urls::Login.as_ref()).into_response();
         }
     };
 
