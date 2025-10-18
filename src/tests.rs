@@ -4,6 +4,7 @@ use axum::body::Body;
 use axum::http::{Method, Request};
 use axum::Router;
 use tower::util::ServiceExt;
+use tracing::debug;
 use url::Url;
 
 use crate::db::{LinkWithOwner, DB};
@@ -58,7 +59,7 @@ async fn test_post_link() {
         .uri(format!("/{}", &link.tag))
         .body(Body::empty())
         .unwrap();
-    eprintln!("pulling tag {}", &link.tag);
+    debug!("pulling tag {}", &link.tag);
     let response = app.oneshot(req).await.unwrap();
     dbg!(response.status());
     if !response.status().is_redirection() {
