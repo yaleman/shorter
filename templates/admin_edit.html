@@ -1,0 +1,40 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Edit Link{% endblock %}
+
+{% block user_nav %}
+<div class="user-info">
+    <span class="user-email">{{ user.email }}</span>
+    <a href="/auth/logout" style="color: white; text-decoration: none; padding: 5px 10px; background: #f44336; border-radius: 4px; font-size: 13px;">Logout</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>Edit Link</h1>
+
+{% if let Some(error) = error %}
+    <div class="message error">{{ error }}</div>
+{% endif %}
+
+<form method="post" action="/admin/edit/{{ link.id }}">
+    <div class="form-group">
+        <label for="name">Link Name:</label>
+        <input type="text" id="name" name="name" required value="{{ link.name }}">
+    </div>
+
+    <div class="form-group">
+        <label for="target">Target URL:</label>
+        <input type="text" id="target" name="target" required value="{{ link.target }}">
+        <small style="color: #666;">Must be a valid URL including http:// or https://</small>
+    </div>
+
+    <div class="form-group">
+        <label for="tag">Tag:</label>
+        <input type="text" id="tag" name="tag" required value="{{ link.tag }}">
+        <small style="color: #666;">Cannot use: link, admin, preview</small>
+    </div>
+
+    <button type="submit">Update Link</button>
+    <a href="/admin/" class="button" style="background: #666; margin-left: 10px;">Cancel</a>
+</form>
+{% endblock %}

@@ -1,0 +1,52 @@
+{% extends "base.html" %}
+
+{% block title %}Admin - Links{% endblock %}
+
+{% block user_nav %}
+<div class="user-info">
+    <span class="user-email">{{ user.email }}</span>
+    <a href="/auth/logout" style="color: white; text-decoration: none; padding: 5px 10px; background: #f44336; border-radius: 4px; font-size: 13px;">Logout</a>
+</div>
+{% endblock %}
+
+{% block content %}
+<h1>Link Management</h1>
+
+{% if links.is_empty() %}
+    <p>No links found. <a href="/admin/create">Create your first link</a></p>
+{% else %}
+    <table>
+        <thead>
+            <tr>
+                <th>Tag</th>
+                <th>Name</th>
+                <th>Target URL</th>
+                <th>Actions</th>
+            </tr>
+        </thead>
+        <tbody>
+            {% for link in links %}
+            <tr>
+                <td>
+                    <a href="/{{ link.tag }}" class="link-preview" target="_blank">{{ link.tag }}</a>
+                </td>
+                <td>{{ link.name }}</td>
+                <td>
+                    <a href="{{ link.target }}" class="link-preview" target="_blank" rel="noopener">
+                        {{ link.target }}
+                    </a>
+                </td>
+                <td>
+                    <div class="actions">
+                        <a href="/admin/edit/{{ link.id }}" class="button button-small">Edit</a>
+                        <form method="post" action="/admin/delete/{{ link.id }}" style="display: inline;">
+                            <button type="submit" class="button button-small button-danger" onclick="return confirm('Are you sure you want to delete this link?');">Delete</button>
+                        </form>
+                    </div>
+                </td>
+            </tr>
+            {% endfor %}
+        </tbody>
+    </table>
+{% endif %}
+{% endblock %}
