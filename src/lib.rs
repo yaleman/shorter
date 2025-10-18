@@ -221,6 +221,15 @@ struct AdminEditTemplate {
     user: AuthUser,
 }
 
+// Link preview template
+#[derive(Template)]
+#[template(path = "link_preview.html")]
+struct LinkPreviewTemplate {
+    name: String,
+    tag: String,
+    target: String,
+}
+
 // Form structs for admin operations
 #[derive(Debug, Deserialize)]
 struct LinkFormData {
@@ -538,9 +547,31 @@ async fn link(
     }
 }
 
-#[instrument(level = "info")]
-async fn link_preview(Path(link): Path<String>) -> String {
-    format!("link_preview: '{}'", &link)
+#[instrument(level = "info", skip(state))]
+async fn link_preview(
+    State(state): State<AppState>,
+    Path(tag): Path<String>,
+) -> Result<HtmlTemplate<LinkPreviewTemplate>, (StatusCode, String)> {
+    if BANNED_TAGS.contains(&tag.as_ref()) {
+        return Err((StatusCode::BAD_REQUEST, "Invalid tag".to_string()));
+    }
+
+    let link = state.db.get_link(&tag).await.map_err(|err| {
+        error!("Error getting link '{}': {:?}", &tag, err);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Error getting link".to_string(),
+        )
+    })?;
+
+    match link {
+        None => Err((StatusCode::NOT_FOUND, "404 Link Not Found".to_string())),
+        Some(link) => Ok(HtmlTemplate(LinkPreviewTemplate {
+            name: link.name,
+            tag: link.tag,
+            target: link.target.to_string(),
+        })),
+    }
 }
 
 // API endpoint for creating links (requires owner_subject in JSON)

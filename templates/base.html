@@ -1,10 +1,10 @@
 <!DOCTYPE html>
 <html lang="en">
-<head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Shorter Admin{% endblock %}</title>
-    <style>
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}Shorter Admin{% endblock %}</title>
+        <style>
         * {
             margin: 0;
             padding: 0;
@@ -99,15 +99,19 @@
             border-color: #4CAF50;
         }
         button, .button {
+            padding: 10px 20px;
             background: #4CAF50;
             color: white;
-            padding: 10px 20px;
             border: none;
             border-radius: 4px;
             cursor: pointer;
             font-size: 14px;
             text-decoration: none;
             display: inline-block;
+            line-height: 1;
+            vertical-align: middle;
+            box-sizing: border-box;
+            font-family: inherit;
         }
         button:hover, .button:hover {
             background: #45a049;
@@ -119,12 +123,22 @@
             background: #da190b;
         }
         .button-small {
-            padding: 5px 10px;
-            font-size: 12px;
+            padding: 5px 10px !important;
+            font-size: 12px !important;
+            line-height: 1 !important;
         }
         .actions {
             display: flex;
             gap: 5px;
+            align-items: center;
+        }
+        .actions form {
+            margin: 0;
+            padding: 0;
+            display: inline-block;
+        }
+        .actions button {
+            margin: 0;
         }
         .message {
             padding: 15px;
@@ -152,21 +166,21 @@
             text-decoration: underline;
         }
     </style>
-</head>
-<body>
-    <div class="container">
-        <nav>
-            <div class="nav-links">
-                <a href="/admin/">Links</a>
-                <a href="/admin/create">Create Link</a>
-            </div>
-            {% block user_nav %}
-            <div class="user-info">
-                <span class="user-email">Not logged in</span>
-            </div>
-            {% endblock %}
-        </nav>
-        {% block content %}{% endblock %}
-    </div>
-</body>
+    </head>
+    <body>
+        <div class="container">
+            <nav>
+                <div class="nav-links">
+                    <a href="/admin/">Links</a>
+                    <a href="/admin/create">Create Link</a>
+                </div>
+                {% block user_nav %}
+                <div class="user-info">
+                    <span class="user-email">Not logged in</span>
+                </div>
+                {% endblock %}
+            </nav>
+            {% block content %}{% endblock %}
+        </div>
+    </body>
 </html>
