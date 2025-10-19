@@ -68,3 +68,12 @@ rustls = { version = "0.23.33", features = [
 hyper = "1.7.0"
 serde_json = "1.0.145"
 tower = "0.5.2"
+
+
+[profile.release]
+opt-level = 3
+debug = "none"
+strip = "symbols"
+debug-assertions = false
+lto = "fat"
+incremental = false
