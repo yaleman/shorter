@@ -71,7 +71,7 @@ pub(crate) fn build_app(shared_state: AppState) -> Router {
                     .await
                     .expect("failed to read css file!"),
                     #[cfg(not(debug_assertions))]
-                    include_str!(),
+                    include_str!("../static/shorter.css"),
                 )
             }),
         )
