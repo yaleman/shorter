@@ -1,13 +1,6 @@
-{% extends "base.html" %}
+{% extends "admin_base.html" %}
 
 {% block title %}Admin - Links{% endblock %}
-
-{% block user_nav %}
-<div class="user-info">
-    <span class="user-email">{{ user.email }}</span>
-    <a href="/auth/logout" style="color: white; text-decoration: none; padding: 5px 10px; background: #f44336; border-radius: 4px; font-size: 13px;">Logout</a>
-</div>
-{% endblock %}
 
 {% block content %}
 <h1>Link Management</h1>
@@ -40,7 +33,7 @@
                 <div class="actions">
                     <a href="/{{link.tag}}/preview" class="button button-small button-secondary" target="_blank">Preview</a>
                     <a href="/admin/edit/{{ link.id }}" class="button button-small">Edit</a>
-                    <form method="post" action="/admin/delete/{{ link.id }}" style="display: inline;">
+                    <form method="post" action="/admin/delete/{{ link.id }}">
                         <button type="submit" class="button button-small button-danger"
                             onclick="return confirm('Are you sure you want to delete this link?');">Delete</button>
                     </form>

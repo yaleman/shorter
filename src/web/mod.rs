@@ -5,7 +5,9 @@ pub(crate) mod prelude;
 use crate::constants::{Urls, BANNED_TAGS};
 use crate::db::LinkWithOwner;
 use crate::oauth::middleware::require_auth;
+use crate::web::admin::cspheaders_layer;
 use askama::Template;
+use axum::middleware::from_fn;
 use axum::response::{Html, IntoResponse};
 use axum::{
     extract::{Path, State},
@@ -41,6 +43,7 @@ pub(crate) fn build_app(shared_state: AppState) -> Router {
         .route("/edit/{id}", get(admin::admin_edit_form))
         .route("/edit/{id}", post(admin::admin_edit))
         .route("/delete/{id}", post(admin::admin_delete))
+        .route_layer(from_fn(cspheaders_layer))
         .route_layer(middleware::from_fn_with_state(
             shared_state.clone(),
             require_auth,
@@ -58,7 +61,16 @@ pub(crate) fn build_app(shared_state: AppState) -> Router {
                 (
                     StatusCode::OK,
                     [("Content-Type", "text/css")],
-                    include_str!("../static/shorter.css"),
+                    #[cfg(debug_assertions)]
+                    #[allow(clippy::expect_used)]
+                    tokio::fs::read_to_string(format!(
+                        "{}/src/static/shorter.css",
+                        env!("CARGO_MANIFEST_DIR")
+                    ))
+                    .await
+                    .expect("failed to read css file!"),
+                    #[cfg(not(debug_assertions))]
+                    include_str!(),
                 )
             }),
         )

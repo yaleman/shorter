@@ -1,0 +1,23 @@
+<!DOCTYPE html>
+<html lang="en">
+    <head>
+        <meta charset="UTF-8">
+        <meta name="viewport" content="width=device-width, initial-scale=1.0">
+        <title>{% block title %}Shorter Admin{% endblock %}</title>
+        <link rel="stylesheet" href="/static/shorter.css">
+    </head>
+    <body>
+        <div class="container admin-container">
+            <nav>
+                <div class="nav-links">
+                    <a href="/admin/">Links</a>
+                    <a href="/admin/create">Create Link</a>
+                    <span class="user-email">{{ user.email }}</span>
+                    <a href="/auth/logout"
+                        class="logout-button">Logout</a>
+                </div>
+            </nav>
+            {% block content %}{% endblock %}
+        </div>
+    </body>
+</html>

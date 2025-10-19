@@ -1,14 +1,19 @@
 //! Admin Handlers
 
+use std::sync::LazyLock;
+
 use crate::{
     constants::BANNED_TAGS, db::LinkWithOwner, oauth::middleware::AuthUser, web::NotFoundTemplate,
 };
 use askama::Template;
 use axum::{
     extract::Path,
+    middleware::Next,
     response::{IntoResponse, Response},
     Extension, Form,
 };
+use axum_csp::{CspDirectiveType, CspHeaderBuilder, CspValue};
+use http::HeaderValue;
 use serde::Deserialize;
 use url::Url;
 
@@ -97,8 +102,19 @@ pub(crate) async fn admin_create(
     Form(form_data): Form<LinkFormData>,
 ) -> Result<Response, (StatusCode, String)> {
     // Parse the target URL
-    let target = Url::parse(&form_data.target)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid target URL".to_string()))?;
+    let target = match Url::parse(&form_data.target) {
+        Ok(url) => url,
+        Err(_) => {
+            return Ok(HtmlTemplate(AdminCreateTemplate {
+                error: Some(format!("Invalid target URL: {}", form_data.target)),
+                user,
+                tag: Some(form_data.tag),
+                target: Some(form_data.target),
+                display_name: Some(form_data.name),
+            })
+            .into_response());
+        }
+    };
 
     // Check if tag is empty or contains only whitespace
     let tag = if form_data.tag.trim().is_empty() {
@@ -186,8 +202,30 @@ pub(crate) async fn admin_edit(
     axum::Form(form_data): Form<LinkFormData>,
 ) -> Result<Response, (StatusCode, String)> {
     // Parse the target URL
-    let target = Url::parse(&form_data.target)
-        .map_err(|_| (StatusCode::BAD_REQUEST, "Invalid target URL".to_string()))?;
+    let target = match Url::parse(&form_data.target) {
+        Ok(url) => url,
+        Err(_) => {
+            // get the link
+            let current_link = state
+                .db
+                .get_link_by_id(&id)
+                .await
+                .map_err(|err| {
+                    error!("Error getting link: {:?}", err);
+                    (
+                        StatusCode::INTERNAL_SERVER_ERROR,
+                        "Failed to get link".to_string(),
+                    )
+                })?
+                .ok_or((StatusCode::NOT_FOUND, "Link not found".to_string()))?;
+            return Ok(HtmlTemplate(AdminEditTemplate {
+                link: current_link,
+                error: Some(format!("Invalid target URL: {}", form_data.target)),
+                user,
+            })
+            .into_response());
+        }
+    };
 
     // Check for banned tags
     if BANNED_TAGS.contains(&form_data.tag.as_str()) {
@@ -247,4 +285,27 @@ pub(crate) async fn admin_delete(
     })?;
 
     Ok(Redirect::to("/admin/"))
+}
+
+static CSP_DIRECTIVES: LazyLock<HeaderValue> = LazyLock::new(|| {
+    CspHeaderBuilder::new()
+        .add(CspDirectiveType::DefaultSrc, vec![CspValue::SelfSite])
+        .finish()
+});
+
+pub(crate) async fn cspheaders_layer(
+    req: axum::extract::Request,
+    next: Next,
+) -> Result<Response, StatusCode> {
+    // wait for the middleware to come back
+    let mut response = next.run(req).await;
+
+    // add the header
+    let headers = response.headers_mut();
+    headers.insert(
+        axum::http::header::CONTENT_SECURITY_POLICY,
+        CSP_DIRECTIVES.clone(),
+    );
+
+    Ok(response)
 }

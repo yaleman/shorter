@@ -1,13 +1,6 @@
-{% extends "base.html" %}
+{% extends "admin_base.html" %}
 
 {% block title %}Admin - Create Link{% endblock %}
-
-{% block user_nav %}
-<div class="user-info">
-    <span class="user-email">{{ user.email }}</span>
-    <a href="/auth/logout" style="color: white; text-decoration: none; padding: 5px 10px; background: #f44336; border-radius: 4px; font-size: 13px;">Logout</a>
-</div>
-{% endblock %}
 
 {% block content %}
 <h1>Create New Link</h1>
@@ -20,7 +13,7 @@
     <div class="form-group">
         <label for="tag">Custom Tag (optional):</label>
         <input type="text" id="tag" name="tag" placeholder="my-custom-tag" value="{{ tag.clone().unwrap_or("".to_string() ) }}">
-        <small style="color: #666;">Leave blank to auto-generate, becomes the end of the URL.<br />Cannot use: {{ BANNED_TAGS | join(", ") }}</small>
+        <small>Leave blank to auto-generate, becomes the end of the URL.<br />Cannot use: {{ BANNED_TAGS | join(", ") }}</small>
     </div>
     <div class="form-group">
         <label for="name">Link Display Name:</label>
@@ -30,10 +23,10 @@
     <div class="form-group">
         <label for="target">Target URL:</label>
         <input type="text" id="target" name="target" required placeholder="https://example.com" value="{{ target.clone().unwrap_or("".to_string()) }}">
-        <small style="color: #666;">Must be a valid URL including http:// or https://</small>
+        <small>Must be a valid URL including http:// or https://</small>
     </div>
 
     <button type="submit">Create Link</button>
-    <a href="/admin/" class="button" style="background: #666; margin-left: 10px;">Cancel</a>
+    <a href="/admin/" class="button btn-secondary">Cancel</a>
 </form>
 {% endblock %}
