@@ -23,10 +23,9 @@ async fn main() -> ExitCode {
         redirect_uri,
     });
 
-    // info!("Starting server on https://{}", &cli.listener_addr);
     info!(
-        "  Frontend URL: {} / {}",
-        &cli.frontend_url, &cli.frontend_url
+        "Frontend URL: {} / Listening on {}",
+        &cli.frontend_url, &cli.listener_addr
     );
     match shorter::start_server(cli, oidc_config).await {
         Ok(_) => ExitCode::SUCCESS,

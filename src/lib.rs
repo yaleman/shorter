@@ -161,7 +161,11 @@ pub struct CliOpts {
     /// Path to TLS private key file (required)
     #[clap(env = "SHORTER_TLS_KEY")]
     pub tls_key: String,
-    #[clap(env = "SHORTER_LISTENER_ADDR", default_value = "127.0.0.1:9000")]
+    #[clap(
+        env = "SHORTER_LISTENER_ADDRESS",
+        default_value = "127.0.0.1:9000",
+        help = "Listener address for the server, remember to include the port"
+    )]
     pub listener_addr: String,
 
     #[clap(env = "SHORTER_DB_PATH", default_value = "shorter.sqlite3")]
