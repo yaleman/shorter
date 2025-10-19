@@ -61,6 +61,13 @@ pub(crate) struct AdminEditTemplate {
     user: AuthUser,
 }
 
+#[derive(Template)]
+#[template(path = "admin_delete.html")]
+pub(crate) struct AdminDeleteTemplate {
+    link: LinkWithOwner,
+    user: AuthUser,
+}
+
 // Form structs for admin operations
 #[derive(Debug, Deserialize)]
 pub(crate) struct LinkFormData {
@@ -269,6 +276,27 @@ pub(crate) async fn admin_edit(
 
     // Redirect to admin list
     Ok(Redirect::to("/admin/").into_response())
+}
+
+#[instrument(level = "info", skip(state))]
+pub(crate) async fn admin_delete_confirm(
+    State(state): State<AppState>,
+    Extension(user): Extension<AuthUser>,
+    Path(id): Path<String>,
+) -> Result<HtmlTemplate<AdminDeleteTemplate>, impl IntoResponse> {
+    let link = state.db.get_link_by_id(&id).await.map_err(|err| {
+        error!("Error getting link: {:?}", err);
+        (
+            StatusCode::INTERNAL_SERVER_ERROR,
+            "Failed to get link".to_string(),
+        )
+            .into_response()
+    })?;
+
+    match link {
+        Some(link) => Ok(HtmlTemplate(AdminDeleteTemplate { link, user })),
+        None => Err(NotFoundTemplate {}.into_response()),
+    }
 }
 
 #[instrument(level = "info", skip(state))]

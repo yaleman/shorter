@@ -241,3 +241,4 @@ Key crates:
 - `rustls`: TLS implementation (via axum-server)
 - `url`, `uuid`, `chrono`: Common utilities
 - `serde`, `serde_json`: Serialization
+- never use inline css styles, they must be put in shorter.css

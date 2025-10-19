@@ -42,6 +42,7 @@ pub(crate) fn build_app(shared_state: AppState) -> Router {
         .route("/create", post(admin::admin_create))
         .route("/edit/{id}", get(admin::admin_edit_form))
         .route("/edit/{id}", post(admin::admin_edit))
+        .route("/delete/{id}", get(admin::admin_delete_confirm))
         .route("/delete/{id}", post(admin::admin_delete))
         .route_layer(from_fn(cspheaders_layer))
         .route_layer(middleware::from_fn_with_state(

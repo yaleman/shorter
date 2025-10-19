@@ -1,0 +1,36 @@
+{% extends "admin_base.html" %}
+
+{% block title %}Delete Link - {{ link.name }}{% endblock %}
+
+{% block content %}
+<h1>Delete Link</h1>
+
+<div class="message error">
+    <strong>Warning:</strong> You are about to permanently delete this link. This action cannot be undone.
+</div>
+
+<div class="link-details">
+    <h2>Link Details</h2>
+    <div class="form-group">
+        <label>Name</label>
+        <div class="readonly-field">{{ link.name }}</div>
+    </div>
+
+    <div class="form-group">
+        <label>Tag</label>
+        <div class="readonly-field">{{ link.tag }}</div>
+    </div>
+
+    <div class="form-group">
+        <label>Target URL</label>
+        <div class="readonly-field">{{ link.target }}</div>
+    </div>
+</div>
+
+<div class="form-actions">
+    <form method="post" action="/admin/delete/{{ link.id }}">
+        <button type="submit" class="button button-danger">Delete Link</button>
+    </form>
+    <a href="/admin/" class="button button-secondary">Cancel</a>
+</div>
+{% endblock %}

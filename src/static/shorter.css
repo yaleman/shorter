@@ -20,6 +20,11 @@ body {
     min-height: 100vh;
 }
 
+body.admin-body {
+    align-items: flex-start;
+    padding-top: 20px;
+}
+
 .container {
     max-width: 95%;
     background: white;
@@ -321,4 +326,42 @@ input[type="text"]:focus,
 input[type="email"]:focus {
     outline: none;
     border-color: #4CAF50;
+}
+
+.link-details {
+    background: #f8f8f8;
+    padding: 20px;
+    border-radius: var(--border-radius-small);
+    margin: 20px 0;
+}
+
+.link-details h2 {
+    margin-top: 0;
+    margin-bottom: 15px;
+    font-size: 18px;
+}
+
+.readonly-field {
+    padding: 10px;
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: var(--border-radius-small);
+    color: #333;
+}
+
+.form-actions {
+    display: flex;
+    gap: 10px;
+    margin-top: 20px;
+}
+
+.form-actions form {
+    display: inline-block;
+    margin: 0;
+}
+
+.message.error {
+    background: #f8d7da;
+    color: #721c24;
+    border: 1px solid #f5c6cb;
 }
