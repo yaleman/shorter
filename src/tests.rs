@@ -9,7 +9,7 @@ use url::Url;
 
 use crate::db::{LinkWithOwner, DB};
 use crate::logging::setup_test_logging;
-use crate::{build_app, AppState, CreateLinkApiRequest};
+use crate::{build_app, web::CreateLinkApiRequest, AppState};
 
 /// Build a test Axum router instance
 async fn get_test_instance() -> (Router, Arc<DB>) {
@@ -30,7 +30,7 @@ async fn test_post_link() {
     let newlink = CreateLinkApiRequest {
         owner_subject: user.subject,
         name: "test".to_string(),
-        target: Url::parse(link_target).unwrap(),
+        target: Url::parse(link_target).expect("Failed to parse URL"),
         tag: Some("cheese".to_string()),
     };
 
@@ -38,10 +38,16 @@ async fn test_post_link() {
         .method(Method::POST)
         .uri("/link")
         .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_string(&newlink).unwrap()))
-        .unwrap();
+        .body(Body::from(
+            serde_json::to_string(&newlink).expect("Failed to serialize newlink"),
+        ))
+        .expect("Failed to build request");
 
-    let response = app.clone().oneshot(req).await.unwrap();
+    let response = app
+        .clone()
+        .oneshot(req)
+        .await
+        .expect("Failed to process request");
 
     assert_eq!(response.status(), 200);
 
@@ -58,14 +64,20 @@ async fn test_post_link() {
         .method(Method::GET)
         .uri(format!("/{}", &link.tag))
         .body(Body::empty())
-        .unwrap();
+        .expect("Failed to build request");
     debug!("pulling tag {}", &link.tag);
-    let response = app.oneshot(req).await.unwrap();
+    let response = app.oneshot(req).await.expect("Failed to process request");
     dbg!(response.status());
     if !response.status().is_redirection() {
         panic!("{:?}", response.into_body());
     }
-    assert_eq!(response.headers().get("location").unwrap(), link_target);
+    assert_eq!(
+        response
+            .headers()
+            .get("location")
+            .expect("Missing location header"),
+        link_target
+    );
     assert!(response.status().is_redirection());
 }
 
@@ -80,7 +92,7 @@ async fn test_banned_tag() {
     let newlink = CreateLinkApiRequest {
         owner_subject: user.subject,
         name: "test".to_string(),
-        target: Url::parse(link_target).unwrap(),
+        target: Url::parse(link_target).expect("Failed to parse URL"),
         tag: Some("admin".to_string()),
     };
 
@@ -88,9 +100,15 @@ async fn test_banned_tag() {
         .method(Method::POST)
         .uri("/link")
         .header("content-type", "application/json")
-        .body(Body::from(serde_json::to_string(&newlink).unwrap()))
-        .unwrap();
+        .body(Body::from(
+            serde_json::to_string(&newlink).expect("Failed to serialize newlink"),
+        ))
+        .expect("Failed to build request");
 
-    let response = app.clone().oneshot(req).await.unwrap();
+    let response = app
+        .clone()
+        .oneshot(req)
+        .await
+        .expect("Failed to process request");
     assert_eq!(response.status(), 400);
 }

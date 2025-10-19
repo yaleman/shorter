@@ -146,6 +146,10 @@ impl DB {
             id.chars().take(8).collect()
         });
 
+        if let Ok(Some(_)) = self.get_link(&tag).await {
+            return Err(MyError::TagExists);
+        }
+
         let now = chrono::Utc::now().naive_utc();
         let new_link = link::ActiveModel {
             id: Set(id.clone()),
@@ -373,7 +377,7 @@ mod tests {
                 Some("Test User".to_string()),
             )
             .await
-            .unwrap();
+            .expect("Failed to get or create user");
 
         assert_eq!(user.id, user2.id);
     }
@@ -385,7 +389,7 @@ mod tests {
         let user = db.create_test_user().await;
 
         // Create link
-        let target = Url::parse("https://example.com").unwrap();
+        let target = Url::parse("https://example.com").expect("Failed to parse URL");
         let link = db
             .create_link(
                 &user.subject,
@@ -394,31 +398,45 @@ mod tests {
                 Some("test".to_string()),
             )
             .await
-            .unwrap();
+            .expect("Failed to create link");
 
         assert_eq!(link.tag, "test");
         assert_eq!(link.name, "Test Link");
 
         // Get link by tag
-        let found = db.get_link("test").await.unwrap().unwrap();
+        let found = db
+            .get_link("test")
+            .await
+            .expect("Failed to get link")
+            .expect("Link not found");
         assert_eq!(found.id, link.id);
 
         // List links
-        let links = db.list_links().await.unwrap();
+        let links = db.list_links().await.expect("Failed to list links");
         assert_eq!(links.len(), 1);
 
         // Update link
-        let new_target = Url::parse("https://example.org").unwrap();
+        let new_target = Url::parse("https://example.org").expect("Failed to parse URL");
         db.update_link(&link.id, "Updated Link", &new_target, "test")
             .await
-            .unwrap();
+            .expect("Failed to update link");
 
-        let updated = db.get_link("test").await.unwrap().unwrap();
+        let updated = db
+            .get_link("test")
+            .await
+            .expect("Failed to get link")
+            .expect("Link not found");
         assert_eq!(updated.name, "Updated Link");
         assert_eq!(updated.target.as_str(), "https://example.org/");
 
         // Delete link
-        db.delete_link(&link.id).await.unwrap();
-        assert!(db.get_link("test").await.unwrap().is_none());
+        db.delete_link(&link.id)
+            .await
+            .expect("Failed to delete link");
+        assert!(db
+            .get_link("test")
+            .await
+            .expect("Failed to get link")
+            .is_none());
     }
 }

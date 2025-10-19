@@ -1,4 +1,5 @@
 //! OIDC/OAuth2 client with PKCE support
+pub mod middleware;
 
 use std::sync::Arc;
 

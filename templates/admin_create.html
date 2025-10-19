@@ -13,25 +13,24 @@
 <h1>Create New Link</h1>
 
 {% if let Some(error) = error %}
-    <div class="message error">{{ error }}</div>
+<div class="message error">{{ error }}</div>
 {% endif %}
 
 <form method="post" action="/admin/create">
     <div class="form-group">
-        <label for="name">Link Name:</label>
-        <input type="text" id="name" name="name" required placeholder="My awesome link">
+        <label for="tag">Custom Tag (optional):</label>
+        <input type="text" id="tag" name="tag" placeholder="my-custom-tag" value="{{ tag.clone().unwrap_or("".to_string() ) }}">
+        <small style="color: #666;">Leave blank to auto-generate, becomes the end of the URL.<br />Cannot use: {{ BANNED_TAGS | join(", ") }}</small>
+    </div>
+    <div class="form-group">
+        <label for="name">Link Display Name:</label>
+        <input type="text" id="name" name="name" required placeholder="My awesome link" value{{ display_name.clone().unwrap_or("".to_string()) }}>
     </div>
 
     <div class="form-group">
         <label for="target">Target URL:</label>
-        <input type="text" id="target" name="target" required placeholder="https://example.com">
+        <input type="text" id="target" name="target" required placeholder="https://example.com" value="{{ target.clone().unwrap_or("".to_string()) }}">
         <small style="color: #666;">Must be a valid URL including http:// or https://</small>
-    </div>
-
-    <div class="form-group">
-        <label for="tag">Custom Tag (optional):</label>
-        <input type="text" id="tag" name="tag" placeholder="my-custom-tag" value="">
-        <small style="color: #666;">Leave blank to auto-generate. Cannot use: link, admin, preview</small>
     </div>
 
     <button type="submit">Create Link</button>

@@ -47,19 +47,26 @@ coveralls:
     @echo "Coverage report should be at https://coveralls.io/github/yaleman/shorter?branch=$(git branch --show-current)"
 
 # build the docker image
-docker_build:
+@docker_build *args='':
     docker buildx build \
         --load \
         --build-arg "GITHUB_SHA=$(git rev-parse HEAD)" \
-        --build-arg "DESCRIPTION=$(./scripts/get_description.sh)" \
-        --tag ghcr.io/yaleman/shorter:latest \
+        --platform linux/$(uname -m) \
+        --tag ghcr.io/yaleman/shorter:latest $@ \
         .
 
 # build and run the docker image, mounting ./config as the config dir
 docker_run: docker_build
     docker run --rm -it \
         -p 9000:9000 \
-        --mount type=bind,src=$(pwd),target=/data \
+        --platform linux/$(uname -m) \
+        --env "SHORTER_TLS_CERT=${SHORTER_TLS_CERT}" \
+        --env "SHORTER_TLS_KEY=${SHORTER_TLS_KEY}" \
+        --env "SHORTER_FRONTEND_URL=${SHORTER_FRONTEND_URL}" \
+        --env "SHORTER_OIDC_CLIENT_ID=${SHORTER_OIDC_CLIENT_ID}" \
+        --env "SHORTER_OIDC_DISCOVERY_URL=${SHORTER_OIDC_DISCOVERY_URL}" \
+        --env "SHORTER_LISTENER_ADDRESS=${SHORTER_LISTENER_ADDRESS}" \
+        --mount type=bind,src=$(pwd),target=/data/ \
         ghcr.io/yaleman/shorter:latest
 
 run:

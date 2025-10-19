@@ -28,3 +28,15 @@ impl AsRef<str> for Urls {
         self.as_str()
     }
 }
+
+/// Things that are banned because they'll break routes
+pub const BANNED_TAGS: &[&str] = &[
+    "link",
+    "admin",
+    "preview",
+    "login",
+    "logout",
+    "auth",
+    "static",
+    "healthcheck",
+];

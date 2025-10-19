@@ -1,136 +1,31 @@
-<!DOCTYPE html>
-<html lang="en">
-    <head>
-        <meta charset="UTF-8">
-        <meta name="viewport" content="width=device-width, initial-scale=1.0">
-        <title>Link Preview - {{ name }}</title>
-        <style>
-        * {
-            margin: 0;
-            padding: 0;
-            box-sizing: border-box;
-        }
-        body {
-            font-family: system-ui, -apple-system, sans-serif;
-            background: #f5f5f5;
-            padding: 20px;
-            line-height: 1.6;
-            display: flex;
-            justify-content: center;
-            align-items: center;
-            min-height: 100vh;
-        }
-        .container {
-            max-width: 600px;
-            background: white;
-            padding: 40px;
-            border-radius: 8px;
-            box-shadow: 0 2px 8px rgba(0,0,0,0.1);
-        }
-        h1 {
-            color: #333;
-            margin-bottom: 20px;
-            font-size: 24px;
-        }
-        .link-info {
-            margin: 30px 0;
-        }
-        .link-label {
-            color: #666;
-            font-size: 14px;
-            font-weight: 500;
-            margin-bottom: 5px;
-        }
-        .link-name {
-            font-size: 18px;
-            color: #333;
-            margin-bottom: 20px;
-        }
-        .link-tag {
-            font-family: monospace;
-            background: #f0f0f0;
-            padding: 4px 8px;
-            border-radius: 4px;
-            color: #555;
-            font-size: 14px;
-            margin-left: 8px;
-        }
-        .link-url {
-            font-size: 14px;
-            color: #0066cc;
-            word-break: break-all;
-            padding: 12px;
-            background: #f8f8f8;
-            border-radius: 4px;
-            border-left: 3px solid #0066cc;
-        }
-        .actions {
-            margin-top: 30px;
-            display: flex;
-            gap: 10px;
-        }
-        .button {
-            background: #4CAF50;
-            color: white;
-            padding: 12px 24px;
-            border: none;
-            border-radius: 4px;
-            cursor: pointer;
-            font-size: 14px;
-            text-decoration: none;
-            display: inline-block;
-            text-align: center;
-            transition: background 0.2s;
-        }
-        .button:hover {
-            background: #45a049;
-        }
-        .button-secondary {
-            background: #666;
-        }
-        .button-secondary:hover {
-            background: #555;
-        }
-        .warning {
-            background: #fff3cd;
-            border: 1px solid #ffc107;
-            color: #856404;
-            padding: 12px;
-            border-radius: 4px;
-            margin-bottom: 20px;
-            font-size: 14px;
-        }
-    </style>
-    </head>
-    <body>
-        <div class="container">
-            <h1>Link Preview</h1>
+{% extends "public_base.html" %}
 
-            <div class="warning">
-                You are about to be redirected to an external site. Please verify the URL below.
-            </div>
+{% block title %}Link Preview - {{ name }}{% endblock %}
 
-            <div class="link-info">
-                <div class="link-label">Name</div>
-                <div class="link-name">
-                    {{ name }}
+{% block pagecontent %}
+<div class="warning">
+    You are about to be redirected to an external site. Please verify the URL below.
+</div>
 
-                </div>
-                <div class="link-label">Tag: <span class="link-tag">{{ tag }}</span>
-                </div>
+<div class="link-info">
+    <div class="link-label">Name</div>
+    <div class="link-name">
+        {{ name }}
 
-                <div class="link-label">Destination URL</div>
-                <div class="link-url">{{ target }}</div>
-            </div>
+    </div>
+    <div class="link-label">Tag: <span class="link-tag">{{ tag }}</span>
+    </div>
 
-            <div class="actions">
-                <a href="{{ target }}" class="button" target="_blank" rel="noopener noreferrer">
-                    Continue to Link
-                </a>
-                <a href="javascript:history.back()" class="button button-secondary">
-                    Go Back
-                </a>
-            </div>
-        </div>
-    </body>
-</html>
+    <div class="link-label">Destination URL</div>
+    <div class="link-url">{{ target }}</div>
+</div>
+
+<div class="actions">
+    <a href="{{ target }}" class="button" target="_blank" rel="noopener noreferrer">
+        Continue to Link
+    </a>
+    <a href="javascript:history.back()" class="button button-secondary">
+        Go Back
+    </a>
+</div>
+{% endblock %}

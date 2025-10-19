@@ -1,6 +1,7 @@
 //! Logging setup for the application
 //!
 
+use tower_http::trace::{MakeSpan, OnResponse};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
 // Initialize tracing subscriber
@@ -32,4 +33,48 @@ pub(crate) fn setup_test_logging() {
         )
         .with(tracing_subscriber::EnvFilter::new("debug,russh::client=info,russh::sshbuffer=info,russh::keys::agent::client=info,russh::keys::agent=info,h2::codec=warn"))
         .try_init();
+}
+
+#[derive(Clone)]
+pub(crate) struct HttpLogger {}
+
+impl<B> MakeSpan<B> for HttpLogger {
+    fn make_span(&mut self, request: &http::Request<B>) -> tracing::Span {
+        let method = request.method().clone();
+        let uri = request.uri().clone();
+        let span = tracing::info_span!(
+            "HTTP Request",
+            http.method = %method,
+            http.uri = %uri.path(),
+        );
+
+        span
+    }
+}
+
+// impl<B> OnRequest<B> for HttpLogger {
+//     fn on_request(&mut self, request: &http::Request<B>, span: &tracing::Span) {
+//         // let method = request.method();
+//         // let uri = request.uri();
+//         // span.record("http.request.method", &method.as_str());
+//         // span.record("http.uri", &uri.path());
+//     }
+// }
+
+impl<B> OnResponse<B> for HttpLogger {
+    fn on_response(
+        self,
+        response: &http::Response<B>,
+        latency: std::time::Duration,
+        span: &tracing::Span,
+    ) {
+        let status = response.status();
+        span.record("http.status_code", status.as_u16());
+        span.record("http.response_latency_ms", latency.as_millis());
+
+        tracing::info!(
+            http.status_code = status.as_u16(),
+            http.response_latency_ms = latency.as_millis(),
+        );
+    }
 }

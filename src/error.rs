@@ -1,12 +1,36 @@
+use std::sync::Arc;
+
+use rustls::crypto::CryptoProvider;
 use url::ParseError;
 
 #[derive(Debug)]
 pub enum MyError {
+    TagExists,
+    Io(String),
     Other(String),
     DatabaseError(String),
     UserNotFound,
     OidcDiscovery(String),
     OidcStateParameterExpired,
+    Crypto(String),
+    Startup(String),
+}
+
+impl From<std::net::AddrParseError> for MyError {
+    fn from(err: std::net::AddrParseError) -> Self {
+        MyError::Startup(format!("{:?}", err))
+    }
+}
+impl From<std::io::Error> for MyError {
+    fn from(err: std::io::Error) -> Self {
+        MyError::Io(format!("{:?}", err))
+    }
+}
+
+impl From<Arc<CryptoProvider>> for MyError {
+    fn from(err: Arc<CryptoProvider>) -> Self {
+        MyError::Crypto(format!("{:?}", err))
+    }
 }
 
 impl From<uuid::Error> for MyError {

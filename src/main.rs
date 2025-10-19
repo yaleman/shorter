@@ -1,9 +1,11 @@
+use std::process::ExitCode;
+
 use clap::Parser;
 use shorter::{logging::setup_logging, CliOpts};
 use tracing::info;
 
 #[tokio::main]
-async fn main() {
+async fn main() -> ExitCode {
     // initialize tracing
     setup_logging();
 
@@ -26,5 +28,8 @@ async fn main() {
         "  Frontend URL: {} / {}",
         &cli.frontend_url, &cli.frontend_url
     );
-    shorter::start_server(cli, oidc_config).await;
+    match shorter::start_server(cli, oidc_config).await {
+        Ok(_) => ExitCode::SUCCESS,
+        Err(_) => ExitCode::FAILURE,
+    }
 }
