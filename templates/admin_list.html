@@ -21,17 +21,17 @@
         {% for link in links %}
         <tr>
             <td>
-                <a href="/{{ link.tag }}" class="link-preview" target="_blank">{{ link.tag }}</a>
+                <a href="/{{ link.tag }}" class="link-preview" target="_blank" rel="noopener noreferrer">{{ link.tag }}</a>
             </td>
             <td>{{ link.name }}</td>
             <td>
-                <a href="{{ link.target }}" class="link-preview" target="_blank" rel="noopener">
+                <a href="{{ link.target }}" class="link-preview" target="_blank" rel="noopener noreferrer">
                     {{ link.target }}
                 </a>
             </td>
             <td>
                 <div class="actions">
-                    <a href="/{{link.tag}}/preview" class="button button-small button-secondary" target="_blank">Preview</a>
+                    <a href="/{{link.tag}}/preview" class="button button-small button-secondary" target="_blank" rel="noopener noreferrer">Preview</a>
                     <a href="/admin/edit/{{ link.id }}" class="button button-small">Edit</a>
                     <a href="/admin/delete/{{ link.id }}" class="button button-small button-danger">Delete</a>
                 </div>

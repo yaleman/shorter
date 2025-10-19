@@ -11,7 +11,7 @@ use axum::middleware::from_fn;
 use axum::response::{Html, IntoResponse};
 use axum::{
     extract::{Path, State},
-    http::StatusCode,
+    http::{header, StatusCode},
     middleware,
     response::Redirect,
     routing::{get, post},
@@ -124,7 +124,7 @@ async fn favicon() -> StatusCode {
 async fn link(
     State(state): State<AppState>,
     Path(tag): Path<String>,
-) -> Result<Redirect, impl IntoResponse> {
+) -> Result<impl IntoResponse, impl IntoResponse> {
     if BANNED_TAGS.contains(&tag.as_ref()) {
         return Err((StatusCode::BAD_REQUEST, "Invalid tag".to_string()).into_response());
     }
@@ -140,7 +140,10 @@ async fn link(
 
     match link {
         None => Err(NotFoundTemplate {}.into_response()),
-        Some(link) => Ok(Redirect::to(link.target.to_string().as_str())),
+        Some(link) => Ok((
+            [(header::REFERRER_POLICY, "no-referrer")],
+            Redirect::to(link.target.to_string().as_str()),
+        )),
     }
 }
 

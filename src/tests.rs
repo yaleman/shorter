@@ -79,6 +79,15 @@ async fn test_post_link() {
         link_target
     );
     assert!(response.status().is_redirection());
+
+    // Verify Referrer-Policy header is set to no-referrer
+    assert_eq!(
+        response
+            .headers()
+            .get("referrer-policy")
+            .expect("Missing referrer-policy header"),
+        "no-referrer"
+    );
 }
 
 #[tokio::test]
@@ -111,4 +120,82 @@ async fn test_banned_tag() {
         .await
         .expect("Failed to process request");
     assert_eq!(response.status(), 400);
+}
+
+#[tokio::test]
+/// Test that redirect responses include the Referrer-Policy: no-referrer header
+async fn test_redirect_referrer_policy_header() {
+    let (app, dbconn) = get_test_instance().await;
+
+    let user = dbconn.create_test_user().await;
+
+    // Create a test link
+    let link_target = "https://example.com/test-page";
+    let test_tag = "test-referrer";
+
+    let newlink = CreateLinkApiRequest {
+        owner_subject: user.subject,
+        name: "Test Referrer Policy".to_string(),
+        target: Url::parse(link_target).expect("Failed to parse URL"),
+        tag: Some(test_tag.to_string()),
+    };
+
+    let create_req = Request::builder()
+        .method(Method::POST)
+        .uri("/link")
+        .header("content-type", "application/json")
+        .body(Body::from(
+            serde_json::to_string(&newlink).expect("Failed to serialize newlink"),
+        ))
+        .expect("Failed to build request");
+
+    let create_response = app
+        .clone()
+        .oneshot(create_req)
+        .await
+        .expect("Failed to process request");
+
+    assert_eq!(create_response.status(), 200);
+
+    // Test the redirect endpoint
+    let redirect_req = Request::builder()
+        .method(Method::GET)
+        .uri(format!("/{}", test_tag))
+        .body(Body::empty())
+        .expect("Failed to build request");
+
+    let redirect_response = app
+        .oneshot(redirect_req)
+        .await
+        .expect("Failed to process request");
+
+    // Verify it's a redirect
+    assert!(
+        redirect_response.status().is_redirection(),
+        "Expected redirect status, got {}",
+        redirect_response.status()
+    );
+
+    // Verify the Location header is correct
+    let location = redirect_response
+        .headers()
+        .get("location")
+        .expect("Missing location header")
+        .to_str()
+        .expect("Invalid location header");
+
+    assert_eq!(location, link_target, "Location header mismatch");
+
+    // Verify the Referrer-Policy header is present and set to no-referrer
+    let referrer_policy = redirect_response
+        .headers()
+        .get("referrer-policy")
+        .expect("Missing referrer-policy header")
+        .to_str()
+        .expect("Invalid referrer-policy header");
+
+    assert_eq!(
+        referrer_policy, "no-referrer",
+        "Referrer-Policy header should be 'no-referrer'"
+    );
 }
