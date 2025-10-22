@@ -1,5 +1,6 @@
 pub(crate) mod admin;
 pub(crate) mod auth;
+pub(crate) mod csrf;
 pub(crate) mod prelude;
 
 use crate::constants::{Urls, BANNED_TAGS};

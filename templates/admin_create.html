@@ -9,7 +9,9 @@
 <div class="message error">{{ error }}</div>
 {% endif %}
 
+{# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token #}
 <form method="post" action="/admin/create">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="form-group">
         <label for="tag">Custom Tag (optional):</label>
         <input type="text" id="tag" name="tag" placeholder="my-custom-tag" value="{{ tag.clone().unwrap_or("".to_string() ) }}">

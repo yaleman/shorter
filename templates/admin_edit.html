@@ -9,7 +9,9 @@
 <div class="message error">{{ error }}</div>
 {% endif %}
 
+{# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token #}
 <form method="post" action="/admin/edit/{{ link.id }}">
+    <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
     <div class="form-group">
         <label for="name">Link Name:</label>
         <input type="text" id="name" name="name" required value="{{ link.name }}">

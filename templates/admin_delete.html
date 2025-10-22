@@ -28,7 +28,9 @@
 </div>
 
 <div class="form-actions">
+    {# nosemgrep: python.django.security.django-no-csrf-token.django-no-csrf-token #}
     <form method="post" action="/admin/delete/{{ link.id }}">
+        <input type="hidden" name="csrf_token" value="{{ csrf_token }}">
         <button type="submit" class="button button-danger">Delete Link</button>
     </form>
     <a href="/admin/" class="button button-secondary">Cancel</a>
