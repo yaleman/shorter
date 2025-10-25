@@ -9,6 +9,7 @@ use url::Url;
 
 use crate::db::{LinkWithOwner, DB};
 use crate::logging::setup_test_logging;
+use crate::web::csrf::{generate_csrf_token, validate_csrf_token};
 use crate::{build_app, web::CreateLinkApiRequest, AppState};
 
 /// Build a test Axum router instance
@@ -198,4 +199,126 @@ async fn test_redirect_referrer_policy_header() {
         referrer_policy, "no-referrer",
         "Referrer-Policy header should be 'no-referrer'"
     );
+}
+
+#[tokio::test]
+async fn test_csrf_token_generation() {
+    use tower_sessions::{MemoryStore, Session};
+
+    let store = MemoryStore::default();
+    let session = Session::new(None, Arc::new(store), None);
+
+    // Test generating a token
+    let token = generate_csrf_token(&session)
+        .await
+        .expect("Failed to generate CSRF token");
+
+    // Verify token is a valid UUID format (36 chars with hyphens)
+    assert_eq!(token.len(), 36);
+    assert!(token.contains('-'));
+
+    // Verify token is stored in session
+    let stored: Option<String> = session
+        .get("csrf_token")
+        .await
+        .expect("Failed to get token from session");
+    assert_eq!(stored, Some(token));
+}
+
+#[tokio::test]
+async fn test_csrf_token_validation_valid() {
+    use tower_sessions::{MemoryStore, Session};
+
+    let store = MemoryStore::default();
+    let session = Session::new(None, Arc::new(store), None);
+
+    // Generate a token
+    let token = generate_csrf_token(&session)
+        .await
+        .expect("Failed to generate CSRF token");
+
+    // Validate the token
+    let result = validate_csrf_token(&session, &token).await;
+    assert!(result.is_ok(), "Valid token should pass validation");
+
+    // Verify token was removed from session (one-time use)
+    let stored: Option<String> = session
+        .get("csrf_token")
+        .await
+        .expect("Failed to check session");
+    assert_eq!(stored, None, "Token should be removed after validation");
+}
+
+#[tokio::test]
+async fn test_csrf_token_validation_invalid() {
+    use tower_sessions::{MemoryStore, Session};
+
+    let store = MemoryStore::default();
+    let session = Session::new(None, Arc::new(store), None);
+
+    // Generate a token
+    let _token = generate_csrf_token(&session)
+        .await
+        .expect("Failed to generate CSRF token");
+
+    // Try to validate with wrong token
+    let result = validate_csrf_token(&session, "wrong-token").await;
+    assert!(result.is_err(), "Invalid token should fail validation");
+    if let Err(status) = result {
+        assert_eq!(
+            status,
+            axum::http::StatusCode::FORBIDDEN,
+            "Should return FORBIDDEN status"
+        );
+    }
+}
+
+#[tokio::test]
+async fn test_csrf_token_validation_missing() {
+    use tower_sessions::{MemoryStore, Session};
+
+    let store = MemoryStore::default();
+    let session = Session::new(None, Arc::new(store), None);
+
+    // Try to validate without generating a token first
+    let result = validate_csrf_token(&session, "any-token").await;
+    assert!(result.is_err(), "Missing token should fail validation");
+    if let Err(status) = result {
+        assert_eq!(
+            status,
+            axum::http::StatusCode::FORBIDDEN,
+            "Should return FORBIDDEN status"
+        );
+    }
+}
+
+#[tokio::test]
+async fn test_csrf_token_one_time_use() {
+    use tower_sessions::{MemoryStore, Session};
+
+    let store = MemoryStore::default();
+    let session = Session::new(None, Arc::new(store), None);
+
+    // Generate a token
+    let token = generate_csrf_token(&session)
+        .await
+        .expect("Failed to generate CSRF token");
+
+    // First validation should succeed
+    let result = validate_csrf_token(&session, &token).await;
+    assert!(result.is_ok(), "First validation should succeed");
+
+    // Second validation with same token should fail (one-time use)
+    let result = validate_csrf_token(&session, &token).await;
+    assert!(
+        result.is_err(),
+        "Second validation should fail (one-time use)"
+    );
+    if let Err(status) = result {
+        assert_eq!(
+            status,
+            axum::http::StatusCode::FORBIDDEN,
+            "Should return FORBIDDEN status"
+        );
+    }
 }
