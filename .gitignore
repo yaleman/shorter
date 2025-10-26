@@ -1,3 +1,4 @@
 /target
 shorter.sqlite3
 tarpaulin-report.html
+*.profraw

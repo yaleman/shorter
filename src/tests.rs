@@ -203,10 +203,16 @@ async fn test_redirect_referrer_policy_header() {
 
 #[tokio::test]
 async fn test_csrf_token_generation() {
-    use tower_sessions::{MemoryStore, Session};
+    setup_test_logging();
+    let app_state = AppState::new_test().await;
 
-    let store = MemoryStore::default();
-    let session = Session::new(None, Arc::new(store), None);
+    let session_store = tower_sessions_sqlx_store::SqliteStore::new(app_state.session_pool.clone());
+    session_store
+        .migrate()
+        .await
+        .expect("Failed to migrate session store");
+
+    let session = tower_sessions::Session::new(None, Arc::new(session_store), None);
 
     // Test generating a token
     let token = generate_csrf_token(&session)
@@ -227,10 +233,16 @@ async fn test_csrf_token_generation() {
 
 #[tokio::test]
 async fn test_csrf_token_validation_valid() {
-    use tower_sessions::{MemoryStore, Session};
+    setup_test_logging();
+    let app_state = AppState::new_test().await;
 
-    let store = MemoryStore::default();
-    let session = Session::new(None, Arc::new(store), None);
+    let session_store = tower_sessions_sqlx_store::SqliteStore::new(app_state.session_pool.clone());
+    session_store
+        .migrate()
+        .await
+        .expect("Failed to migrate session store");
+
+    let session = tower_sessions::Session::new(None, Arc::new(session_store), None);
 
     // Generate a token
     let token = generate_csrf_token(&session)
@@ -251,10 +263,16 @@ async fn test_csrf_token_validation_valid() {
 
 #[tokio::test]
 async fn test_csrf_token_validation_invalid() {
-    use tower_sessions::{MemoryStore, Session};
+    setup_test_logging();
+    let app_state = AppState::new_test().await;
 
-    let store = MemoryStore::default();
-    let session = Session::new(None, Arc::new(store), None);
+    let session_store = tower_sessions_sqlx_store::SqliteStore::new(app_state.session_pool.clone());
+    session_store
+        .migrate()
+        .await
+        .expect("Failed to migrate session store");
+
+    let session = tower_sessions::Session::new(None, Arc::new(session_store), None);
 
     // Generate a token
     let _token = generate_csrf_token(&session)
@@ -275,10 +293,16 @@ async fn test_csrf_token_validation_invalid() {
 
 #[tokio::test]
 async fn test_csrf_token_validation_missing() {
-    use tower_sessions::{MemoryStore, Session};
+    setup_test_logging();
+    let app_state = AppState::new_test().await;
 
-    let store = MemoryStore::default();
-    let session = Session::new(None, Arc::new(store), None);
+    let session_store = tower_sessions_sqlx_store::SqliteStore::new(app_state.session_pool.clone());
+    session_store
+        .migrate()
+        .await
+        .expect("Failed to migrate session store");
+
+    let session = tower_sessions::Session::new(None, Arc::new(session_store), None);
 
     // Try to validate without generating a token first
     let result = validate_csrf_token(&session, "any-token").await;
@@ -294,10 +318,16 @@ async fn test_csrf_token_validation_missing() {
 
 #[tokio::test]
 async fn test_csrf_token_one_time_use() {
-    use tower_sessions::{MemoryStore, Session};
+    setup_test_logging();
+    let app_state = AppState::new_test().await;
 
-    let store = MemoryStore::default();
-    let session = Session::new(None, Arc::new(store), None);
+    let session_store = tower_sessions_sqlx_store::SqliteStore::new(app_state.session_pool.clone());
+    session_store
+        .migrate()
+        .await
+        .expect("Failed to migrate session store");
+
+    let session = tower_sessions::Session::new(None, Arc::new(session_store), None);
 
     // Generate a token
     let token = generate_csrf_token(&session)

@@ -1,5 +1,6 @@
 use std::sync::Arc;
 
+use openidconnect::DiscoveryError;
 use rustls::crypto::CryptoProvider;
 use url::ParseError;
 
@@ -14,6 +15,12 @@ pub enum MyError {
     OidcStateParameterExpired,
     Crypto(String),
     Startup(String),
+}
+
+impl From<DiscoveryError<reqwest::Error>> for MyError {
+    fn from(err: DiscoveryError<reqwest::Error>) -> Self {
+        MyError::OidcDiscovery(format!("OIDC discovery error: {:?}", err))
+    }
 }
 
 impl From<std::net::AddrParseError> for MyError {
