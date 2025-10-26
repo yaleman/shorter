@@ -50,3 +50,9 @@ impl From<sea_orm::DbErr> for MyError {
         MyError::DatabaseError(format!("{:?}", err))
     }
 }
+
+impl From<openidconnect::ConfigurationError> for MyError {
+    fn from(err: openidconnect::ConfigurationError) -> Self {
+        MyError::OidcDiscovery(format!("OIDC configuration error: {:?}", err))
+    }
+}
