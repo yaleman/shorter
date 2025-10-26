@@ -67,17 +67,6 @@ impl OAuthClient {
 
         let http_client = reqwest::Client::new();
 
-        let provider_metadata = Arc::new(RwLock::new(
-            CoreProviderMetadata::discover_async(issuer_url.clone(), &http_client.clone())
-                .await
-                .map_err(|e| {
-                    MyError::OidcDiscovery(format!(
-                        "Failed to query OIDC provider: error={e} issuer_url={:?}",
-                        issuer_url
-                    ))
-                })?,
-        ));
-
         let provider_metadata = match run_discovery(&issuer_url, http_client.clone()).await {
             Ok(pm) => Arc::new(RwLock::new(Some(pm))),
             Err(err) => {
