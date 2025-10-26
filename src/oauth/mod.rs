@@ -14,11 +14,43 @@ use tracing::{debug, error};
 use crate::db::DB;
 use crate::error::MyError;
 
+async fn run_discovery(
+    issuer_url: &IssuerUrl,
+    http_client: reqwest::Client,
+) -> Result<CoreProviderMetadata, openidconnect::DiscoveryError<reqwest::Error>> {
+    CoreProviderMetadata::discover_async(
+        issuer_url.clone(),
+        &(move |http_request: http::Request<Vec<u8>>| {
+            let http_client = http_client.clone();
+            async move {
+                let uri = http_request.uri().to_string();
+                let response = http_client
+                    .request(http_request.method().clone(), &uri)
+                    .headers(http_request.headers().clone())
+                    .body(http_request.into_body())
+                    .send()
+                    .await?;
+
+                let status = response.status();
+                let body = response.bytes().await?.to_vec();
+
+                // This should never fail as we're providing valid status and body
+                let mut res = http::Response::new(body);
+                *res.status_mut() = status;
+                Ok(res)
+            }
+        }),
+    )
+    .await
+}
+
 /// OAuth client for OIDC authentication with PKCE
 pub struct OAuthClient {
-    provider_metadata: Arc<RwLock<CoreProviderMetadata>>,
+    provider_metadata: Arc<RwLock<Option<CoreProviderMetadata>>>,
     client_id: ClientId,
     redirect_uri: RedirectUrl,
+    issuer_url: IssuerUrl,
+    http_client: reqwest::Client,
     db: Arc<DB>,
 }
 
@@ -33,20 +65,16 @@ impl OAuthClient {
         let issuer_url = IssuerUrl::new(discovery_url.to_string())
             .map_err(|e| MyError::OidcDiscovery(format!("Invalid OIDC issuer URL: {}", e)))?;
 
-        let provider_metadata = Arc::new(RwLock::new(
-            CoreProviderMetadata::discover_async(
-                issuer_url.clone(),
-                openidconnect::reqwest::async_http_client,
-            )
-            .await
-            .map_err(|e| {
-                MyError::OidcDiscovery(format!(
-                    "Failed to query OIDC provider: error={e} issuer_url={:?}",
-                    issuer_url
-                ))
-            })?,
-        ));
+        let http_client = reqwest::Client::new();
 
+        let provider_metadata = match run_discovery(&issuer_url, http_client.clone()).await {
+            Ok(pm) => Arc::new(RwLock::new(Some(pm))),
+            Err(err) => {
+                error!(error=%err, "Failed to run OIDC discovery");
+                // TODO: this should spawn a task to retry discovery every 30 seconds
+                Arc::new(RwLock::new(None))
+            }
+        };
         let redirect_url = RedirectUrl::new(redirect_uri.to_string())
             .map_err(|e| MyError::OidcDiscovery(format!("Invalid OIDC redirect URI: {}", e)))?;
 
@@ -55,7 +83,26 @@ impl OAuthClient {
             client_id: ClientId::new(client_id.to_string()),
             redirect_uri: redirect_url,
             db,
+            issuer_url,
+            http_client,
         })
+    }
+
+    pub async fn update_provider_metadata(&self) -> Result<CoreProviderMetadata, MyError> {
+        let existing_pm = self.provider_metadata.read().await.clone();
+        match existing_pm {
+            Some(provider_metadata) => Ok(provider_metadata.clone()),
+            None => {
+                let pm = run_discovery(&self.issuer_url, self.http_client.clone())
+                    .await
+                    .map_err(|err| {
+                        error!(error=?err, "Failed to run OIDC discovery");
+                        MyError::from(err)
+                    })?;
+                self.provider_metadata.write().await.replace(pm.clone());
+                Ok(pm)
+            }
+        }
     }
 
     /// Generate authorization URL with PKCE challenge
@@ -63,7 +110,10 @@ impl OAuthClient {
     pub async fn generate_auth_url(&self) -> Result<(String, String), MyError> {
         let (pkce_challenge, pkce_verifier) = PkceCodeChallenge::new_random_sha256();
 
-        let provider_metadata = self.provider_metadata.read().await.clone();
+        let provider_metadata = match self.provider_metadata.read().await.as_ref() {
+            Some(val) => val.clone(),
+            None => self.update_provider_metadata().await?,
+        };
         let client = CoreClient::from_provider_metadata(
             provider_metadata,
             self.client_id.clone(),
@@ -146,7 +196,10 @@ impl OAuthClient {
             return Err(MyError::OidcStateParameterExpired);
         }
 
-        let provider_metadata = self.provider_metadata.read().await.clone();
+        let provider_metadata = match self.provider_metadata.read().await.as_ref() {
+            Some(val) => val.clone(),
+            None => self.update_provider_metadata().await?,
+        };
         let client = CoreClient::from_provider_metadata(
             provider_metadata,
             self.client_id.clone(),
@@ -160,9 +213,9 @@ impl OAuthClient {
         debug!("Redirect URI: {}", self.redirect_uri.as_str());
 
         let token_response = client
-            .exchange_code(AuthorizationCode::new(code.to_string()))
+            .exchange_code(AuthorizationCode::new(code.to_string()))?
             .set_pkce_verifier(pkce_verifier)
-            .request_async(openidconnect::reqwest::async_http_client)
+            .request_async(&reqwest::Client::new())
             .await
             .map_err(|e| {
                 error!("Token exchange error: {:?}", e);
