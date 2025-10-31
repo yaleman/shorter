@@ -4,18 +4,33 @@
 use tower_http::trace::{MakeSpan, OnResponse};
 use tracing_subscriber::{layer::SubscriberExt, util::SubscriberInitExt};
 
+use crate::error::MyError;
+
 // Initialize tracing subscriber
-pub fn setup_logging() {
+pub fn setup_logging() -> Result<(), MyError> {
     // Initialize tracing subscriber
-    let log_level = std::env::var("RUST_LOG").unwrap_or("info".to_string());
+    let log_level = std::env::var("RUST_LOG")
+        .unwrap_or("info".to_string())
+        .to_lowercase();
     let log_level_sqlx = std::env::var("RUST_LOG_SQLX").unwrap_or("info".to_string());
     let log_level_tower_http = std::env::var("RUST_LOG_TOWER_HTTP").unwrap_or(log_level.clone());
+
+    let format_layer = tracing_subscriber::fmt::layer()
+        .with_thread_ids(false)
+        .with_thread_names(false)
+        .with_target(log_level == "debug" || log_level == "trace")
+        .with_level(true)
+        .with_ansi(false)
+        .compact();
+    let filter_layer = tracing_subscriber::EnvFilter::builder().parse(format!(
+        "shorter={log_level},tower_http={log_level_tower_http},h2=warn,sqlx={log_level_sqlx}",
+    ))?;
+
     tracing_subscriber::registry()
-        .with(tracing_subscriber::EnvFilter::new(format!(
-            "shorter={log_level},tower_http={log_level_tower_http},h2=warn,sqlx={log_level_sqlx}",
-        )))
-        .with(tracing_subscriber::fmt::layer())
+        .with(filter_layer)
+        .with(format_layer)
         .init();
+    Ok(())
 }
 
 #[cfg(test)]
@@ -43,7 +58,7 @@ impl<B> MakeSpan<B> for HttpLogger {
         let method = request.method().clone();
         let uri = request.uri().clone();
         let span = tracing::info_span!(
-            "HTTP Request",
+            "",
             http.method = %method,
             http.uri = %uri.path(),
         );
@@ -51,15 +66,6 @@ impl<B> MakeSpan<B> for HttpLogger {
         span
     }
 }
-
-// impl<B> OnRequest<B> for HttpLogger {
-//     fn on_request(&mut self, request: &http::Request<B>, span: &tracing::Span) {
-//         // let method = request.method();
-//         // let uri = request.uri();
-//         // span.record("http.request.method", &method.as_str());
-//         // span.record("http.uri", &uri.path());
-//     }
-// }
 
 impl<B> OnResponse<B> for HttpLogger {
     fn on_response(
