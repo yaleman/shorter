@@ -17,6 +17,12 @@ pub enum MyError {
     Startup(String),
 }
 
+impl From<tracing_subscriber::filter::ParseError> for MyError {
+    fn from(err: tracing_subscriber::filter::ParseError) -> Self {
+        MyError::Startup(format!("Failed to parse log directive: {:?}", err))
+    }
+}
+
 impl From<DiscoveryError<reqwest::Error>> for MyError {
     fn from(err: DiscoveryError<reqwest::Error>) -> Self {
         MyError::OidcDiscovery(format!("OIDC discovery error: {:?}", err))

@@ -7,7 +7,10 @@ use tracing::info;
 #[tokio::main]
 async fn main() -> ExitCode {
     // initialize tracing
-    setup_logging();
+    if let Err(err) = setup_logging() {
+        eprintln!("Failed to initialize logging: {:?}", err);
+        return ExitCode::FAILURE;
+    };
 
     let cli = CliOpts::parse();
 
