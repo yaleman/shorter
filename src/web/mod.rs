@@ -104,7 +104,7 @@ struct LinkPreviewTemplate {
 
 // Query params for OAuth callback
 #[derive(Debug, Deserialize)]
-struct OAuthCallbackQuery {
+pub struct OAuthCallbackQuery {
     code: String,
     state: String,
 }
