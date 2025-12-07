@@ -21,6 +21,7 @@ pub(crate) mod prelude;
 mod tests;
 pub(crate) mod web;
 
+use std::net::SocketAddr;
 use std::path::PathBuf;
 use std::sync::Arc;
 
@@ -126,7 +127,7 @@ pub async fn start_server(cli: CliOpts, oidc_config: Option<OidcConfig>) -> Resu
         })?;
 
     // Use axum-server with TLS
-    axum_server::bind_rustls(cli.listener_addr.parse()?, tls_config)
+    axum_server::bind_rustls(cli.listener_addr.parse::<SocketAddr>()?, tls_config)
         .serve(app.into_make_service())
         .await
         .map_err(|e| {

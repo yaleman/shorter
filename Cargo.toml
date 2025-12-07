@@ -8,7 +8,7 @@ edition = "2021"
 [dependencies]
 anyhow = "1.0.100"
 axum = { version = "0.8.7", features = ["macros", "http2"] }
-clap = { version = "4.5.51", features = ["derive", "env"] }
+clap = { version = "4.5.53", features = ["derive", "env"] }
 serde = { version = "1.0.228", features = ["derive"] }
 
 # Database - sea-orm
@@ -38,9 +38,7 @@ uuid = { version = "1.19.0", features = ["serde", "v4"] }
 
 axum-csp = "0.0.10"
 
-axum-tracing-opentelemetry = { version = "0.11.0", features = [
-    "tracing_subscriber_ext",
-] }
+axum-tracing-opentelemetry = { version = "0.32.2" }
 askama = { version = "0.14.0" }
 
 tracing = { version = "^0.1.43", features = ["release_max_level_debug"] }
@@ -55,7 +53,7 @@ async-trait = "0.1.89"
 tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"] }
 sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite"] }
 tempfile = "3.23.0"
-axum-server = { version = "0.7.3", features = ["tls-rustls"] }
+axum-server = { version = "0.8.0", features = ["tls-rustls"] }
 rustls = { version = "0.23.35", features = [
     "brotli",
     "hashbrown",
