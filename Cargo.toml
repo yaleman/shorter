@@ -41,7 +41,7 @@ axum-csp = "0.0.10"
 axum-tracing-opentelemetry = { version = "0.32.2" }
 askama = { version = "0.14.0" }
 
-tracing = { version = "^0.1.43", features = ["release_max_level_debug"] }
+tracing = { version = "^0.1.44", features = ["release_max_level_debug"] }
 tower-http = { version = "^0.6.8", features = [
     "fs",
     "trace",
