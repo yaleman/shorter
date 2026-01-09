@@ -54,7 +54,7 @@ tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"] }
 sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite"] }
 tempfile = "3.24.0"
 axum-server = { version = "0.8.0", features = ["tls-rustls"] }
-rustls = { version = "0.23.35", features = [
+rustls = { version = "0.23.36", features = [
     "brotli",
     "hashbrown",
     "zlib",
