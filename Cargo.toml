@@ -38,7 +38,7 @@ uuid = { version = "1.19.0", features = ["serde", "v4"] }
 
 axum-csp = "0.0.10"
 
-axum-tracing-opentelemetry = { version = "0.32.2" }
+axum-tracing-opentelemetry = { version = "0.32.3" }
 askama = { version = "0.15.1" }
 
 tracing = { version = "^0.1.44", features = ["release_max_level_debug"] }
