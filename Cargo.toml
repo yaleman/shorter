@@ -52,7 +52,7 @@ tower-sessions = { version = "^0.14.0", features = ["axum-core"] }
 async-trait = "0.1.89"
 tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"] }
 sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite"] }
-tempfile = "3.24.0"
+tempfile = "3.25.0"
 axum-server = { version = "0.8.0", features = ["tls-rustls"] }
 rustls = { version = "0.23.36", features = [
     "brotli",
