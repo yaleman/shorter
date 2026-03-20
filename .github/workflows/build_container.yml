@@ -37,7 +37,6 @@ jobs:
         type=ref,event=pr
       build-args: |
         GITHUB_SHA=${{ github.sha }}
-        DESCRIPTION="Rusty little S3-compatible object storage server"
     secrets:
       registry-auths: |
         - registry: ghcr.io

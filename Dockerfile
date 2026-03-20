@@ -32,7 +32,7 @@ WORKDIR /
 RUN useradd -m nonroot
 
 FROM scratch AS final
-ARG DESCRIPTION="Rusty little S3-compatible object storage server"
+ARG DESCRIPTION="Yet another link shortener written in Rust"
 ARG GITHUB_SHA="unknown"
 LABEL DESCRIPTION="${DESCRIPTION}"
 LABEL com.shorter.git-commit="${GITHUB_SHA}"
