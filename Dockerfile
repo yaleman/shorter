@@ -1,4 +1,4 @@
-FROM rust:stable-slim-trixie AS builder
+FROM rust:1-slim-trixie AS builder
 
 ARG GITHUB_SHA="$(git rev-parse HEAD)"
 LABEL com.shorter.git-commit="${GITHUB_SHA}"
@@ -20,7 +20,7 @@ RUN cargo build --quiet --release --bin shorter
 RUN chmod +x /shorter/target/release/shorter
 
 # FROM gcr.io/distroless/cc-debian12 AS shorter
-FROM rust:stable-slim-trixie AS secondary
+FROM rust:1-slim-trixie AS secondary
 
 RUN apt-get -y remove --allow-remove-essential \
     binutils cpp cpp-14 gcc gcc grep gzip ncurses-bin ncurses-base sed && apt-get autoremove -y && apt-get clean && rm -rf /var/lib/apt/lists/* && rm -rf /usr/local/cargo /usr/local/rustup
