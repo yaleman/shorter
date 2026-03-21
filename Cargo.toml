@@ -2,6 +2,13 @@
 name = "shorter"
 version = "0.1.0"
 edition = "2021"
+license = "MIT"
+authors = ["James Hodgkinson <james+shorter@terminaloutcomes.com>"]
+description = "Yet another link shortener written in Rust"
+readme = "README.md"
+repository = "https://github.com/yaleman/shorter"
+homepage = "https://github.com/yaleman/shorter"
+
 
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
@@ -38,7 +45,7 @@ uuid = { version = "1.22.0", features = ["serde", "v4"] }
 
 axum-csp = "0.0.10"
 
-axum-tracing-opentelemetry = { version = "0.33.0" }
+axum-tracing-opentelemetry = { version = "0.33.1" }
 askama = { version = "0.15.4" }
 
 tracing = { version = "^0.1.44", features = ["release_max_level_debug"] }
