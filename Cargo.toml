@@ -14,7 +14,7 @@ homepage = "https://github.com/yaleman/shorter"
 
 [dependencies]
 anyhow = "1.0.102"
-axum = { version = "0.8.8", features = ["macros", "http2"] }
+axum = { version = "0.8.9", features = ["macros", "http2"] }
 clap = { version = "4.6.0", features = ["derive", "env"] }
 serde = { version = "1.0.228", features = ["derive"] }
 
