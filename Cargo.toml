@@ -49,7 +49,7 @@ axum-tracing-opentelemetry = { version = "0.38.0" }
 askama = { version = "0.16.0" }
 
 tracing = { version = "^0.1.44", features = ["release_max_level_debug"] }
-tower-http = { version = "^0.6.11", features = [
+tower-http = { version = "^0.7.0", features = [
     "fs",
     "trace",
     "add-extension",
