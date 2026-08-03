@@ -63,7 +63,7 @@ async fn test_post_link() {
 
     let req = Request::builder()
         .method(Method::GET)
-        .uri(format!("/{}", &link.tag))
+        .uri(format!("/{}", link.tag))
         .body(Body::empty())
         .expect("Failed to build request");
     debug!("pulling tag {}", &link.tag);
