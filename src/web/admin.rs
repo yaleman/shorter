@@ -207,6 +207,7 @@ pub(crate) async fn admin_create(
     // Redirect to admin list
 }
 
+#[allow(clippy::result_large_err)]
 #[instrument(level = "info", skip(state))]
 pub(crate) async fn admin_edit_form(
     State(state): State<AppState>,
@@ -330,6 +331,7 @@ pub(crate) async fn admin_edit(
     Ok(Redirect::to("/admin/").into_response())
 }
 
+#[allow(clippy::result_large_err)]
 #[instrument(level = "info", skip(state))]
 pub(crate) async fn admin_delete_confirm(
     State(state): State<AppState>,
