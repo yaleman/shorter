@@ -121,6 +121,7 @@ async fn favicon() -> StatusCode {
     StatusCode::NO_CONTENT
 }
 
+#[allow(clippy::result_large_err)]
 #[instrument(level = "info", skip(state))]
 async fn link(
     State(state): State<AppState>,
@@ -165,6 +166,7 @@ impl axum::response::IntoResponse for NotFoundTemplate {
     }
 }
 
+#[allow(clippy::result_large_err)]
 #[instrument(level = "info", skip(state))]
 async fn link_preview(
     State(state): State<AppState>,
