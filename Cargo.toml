@@ -1,21 +1,17 @@
 [package]
 name = "shorter"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
 license = "MIT"
 authors = ["James Hodgkinson <james+shorter@terminaloutcomes.com>"]
 description = "Yet another link shortener written in Rust"
 readme = "README.md"
 repository = "https://github.com/yaleman/shorter"
-homepage = "https://github.com/yaleman/shorter"
 
-
-# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-anyhow = "1.0.102"
 axum = { version = "0.8.9", features = ["macros", "http2"] }
-clap = { version = "4.6.1", features = ["derive", "env"] }
+clap = { version = "4.6.10", features = ["derive", "env"] }
 serde = { version = "1.0.228", features = ["derive"] }
 
 # Database - sea-orm
@@ -40,12 +36,11 @@ time = "0.3.47"
 
 tokio = { version = "1.52.3", features = ["full", "tracing"] }
 tracing-subscriber = "0.3.23"
-url = { version = "2.5.8", features = ["serde"] }
-uuid = { version = "1.23.2", features = ["serde", "v4"] }
+url = { version = "2.5.9", features = ["serde"] }
+uuid = { version = "1.29.3", features = ["serde", "v4"] }
 
 axum-csp = "0.0.10"
 
-axum-tracing-opentelemetry = { version = "0.42.1" }
 askama = { version = "0.16.0" }
 
 tracing = { version = "^0.1.44", features = ["release_max_level_debug"] }
@@ -55,11 +50,14 @@ tower-http = { version = "^0.7.0", features = [
     "add-extension",
     "compression-gzip",
 ] }
-tower-sessions = { version = "^0.14.0", features = ["axum-core"] }
+tower-sessions = { version = "^0.15.0", features = ["axum-core"] }
 async-trait = "0.1.89"
-tower-sessions-sqlx-store = { version = "0.15.0", features = ["sqlite"] }
-sqlx = { version = "0.8.6", features = ["runtime-tokio-rustls", "sqlite"] }
-tempfile = "3.27.0"
+tower-sessions-sqlx-store = { version = "0.16.0", features = ["sqlite"] }
+sqlx = { version = "0.9.1", features = [
+    "runtime-tokio",
+    "sqlite",
+    "tls-rustls",
+] }
 axum-server = { version = "0.9.0", features = ["tls-rustls"] }
 rustls = { version = "0.23.40", features = [
     "brotli",
